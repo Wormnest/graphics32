@@ -35,7 +35,7 @@ uses
   {$ELSE}
   Windows,
   {$ENDIF}
-  GR32, SysUtils;
+  GR32_Color, SysUtils;
 
 { ClipLine }
 { Clips the (X1, Y1)-(X2,Y2) line to the rectangle using Sutherland-Cohen Line

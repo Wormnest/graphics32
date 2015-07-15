@@ -143,13 +143,19 @@ var
   IsThemeActive: function: BOOL; stdcall;
   IsAppThemed: function: BOOL; stdcall;
   EnableTheming: function(fEnable: BOOL): HRESULT; stdcall;
+
+{$IFDEF FPC}
+// Needed for Fpc
+procedure InitializeThemeNexus;
+procedure FreeThemeNexus;
+{$ENDIF}
 {$ENDIF}
 
 implementation
 
 {$IFNDEF CLX}
 uses
-  Messages, Forms, Classes;
+  Messages, Forms, Classes {$IFDEF FPC}, InterfaceBase, LclIntf, Win32Int{$ENDIF};
 {$ENDIF}
 
 function CPUID_Available: Boolean;
@@ -175,7 +181,11 @@ function CPU_Signature: Integer;
 asm
         PUSH    EBX
         MOV     EAX,1
-        DW      $A20F   // CPUID
+        {$IFDEF FPC}
+        CPUID
+        {$ELSE}
+        DW        $A20F   // CPUID
+        {$ENDIF}
         POP     EBX
 end;
 
@@ -183,7 +193,11 @@ function CPU_Features: Integer;
 asm
         PUSH    EBX
         MOV     EAX,1
-        DW      $A20F   // CPUID
+        {$IFDEF FPC}
+        CPUID
+        {$ELSE}
+        DW        $A20F   // CPUID
+        {$ENDIF}
         POP     EBX
         MOV     EAX,EDX
 end;
@@ -193,7 +207,11 @@ asm
         PUSH    EBX
         MOV     @Result, True
         MOV     EAX, $80000000
-        DW      $A20F   // CPUID
+        {$IFDEF FPC}
+        CPUID
+        {$ELSE}
+        DW        $A20F   // CPUID
+        {$ENDIF}
         CMP     EAX, $80000000
         JBE     @NOEXTENSION
         JMP     @EXIT
@@ -207,7 +225,11 @@ function CPU_AMDExtFeatures: Integer;
 asm
         PUSH    EBX
         MOV     EAX, $80000001
-        DW      $A20F   // CPUID
+        {$IFDEF FPC}
+        CPUID
+        {$ELSE}
+        DW        $A20F   // CPUID
+        {$ENDIF}
         POP     EBX
         MOV     EAX,EDX
 end;
@@ -220,7 +242,9 @@ begin
   if (InstructionSet = ci3DNow) or
      (InstructionSet = ci3DNowExt) then
   begin
+    {$IFNDEF FPC} // Apparently causing problems with fpc, crashes at startup
     if not CPU_AMDExtensionsAvailable or (CPU_AMDExtFeatures and CPUISChecks[InstructionSet] = 0) then
+    {$ENDIF}
       Exit;
   end
   else
@@ -255,6 +279,7 @@ begin
   Result := HasInstructionSet(ci3DNowExt);
 end;
 
+{.$IFNDEF FPC}
 {$IFNDEF CLX}
 const
   UXTHEME_DLL = 'uxtheme.dll';
@@ -327,7 +352,7 @@ type
 
 {$IFDEF XPTHEMES}
 var
-  ThemeNexus: TThemeNexus;
+  ThemeNexus: TThemeNexus = nil;
 {$ENDIF}
 
 { TThemeNexus }
@@ -352,14 +377,22 @@ end;
 
 constructor TThemeNexus.Create;
 begin
-  FWindowHandle := {$IFDEF COMPILER6}Classes.{$ENDIF}AllocateHWnd(WndProc);
-  OpenVisualStyles;
+  // Using TWin32WidgetSet(WidgetSet).AllocateHWnd probably doesn't work here
+  // because WidgetSet has not been initialized yet since Application.Initialize
+  // hasn't been called yet. (Not checked if this is the reason, just a guess.)
+  // So for now we won't be able to use this in Fpc/Lazarus
+  FWindowHandle := {$IFNDEF FPC} {$IFDEF COMPILER6}Classes.{$ENDIF}{$ELSE}LclIntf.{$ENDIF}AllocateHWnd(WndProc);
+  if FWindowHandle <> 0 then
+    OpenVisualStyles;
 end;
 
 destructor TThemeNexus.Destroy;
 begin
   CloseVisualStyles;
-  {$IFDEF COMPILER6}Classes.{$ENDIF}DeallocateHWnd(FWindowHandle);
+(**
+  {$IFNDEF FPC} {$IFDEF COMPILER6}Classes.{$ENDIF}{$ELSE}TWin32WidgetSet(WidgetSet). {$ENDIF}DeallocateHWnd(FWindowHandle);
+**)
+  {$IFNDEF FPC} {$IFDEF COMPILER6}Classes.{$ENDIF}{$ELSE}LclIntf. {$ENDIF}DeallocateHWnd(FWindowHandle);
   inherited;
 end;
 
@@ -388,21 +421,50 @@ begin
   end;
   with Message do Result := DefWindowProc(FWindowHandle, Msg, wParam, lParam);
 end;
+
+{$IFDEF FPC}
+var
+  NexusUsageCount: Integer = 0;
 {$ENDIF}
+
+procedure InitializeThemeNexus;
+begin
+  {$IFNDEF CLX}
+    {$IFDEF XPTHEMES}
+    if ThemeNexus = nil then
+      ThemeNexus := TThemeNexus.Create;
+    {$IFDEF FPC}
+    Inc(NexusUsageCount);
+    {$ENDIF}
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+procedure FreeThemeNexus;
+begin
+  {$IFNDEF CLX}
+    {$IFDEF XPTHEMES}
+    if NexusUsageCount = 1 then begin
+      ThemeNexus.Free;
+      ThemeNexus := nil;
+    end;
+    Dec(NexusUsageCount);
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+{$ENDIF}
+{.$ENDIF}
 
 initialization
-{$IFNDEF CLX}
-  {$IFDEF XPTHEMES}
-  ThemeNexus := TThemeNexus.Create;
+  {$IFNDEF FPC}
+  // Can't be initialized here in Fpc since the WidgetSet is not initialized at this point
+  InitializeThemeNexus;
   {$ENDIF}
-{$ENDIF}
-
 finalization
-{$IFNDEF CLX}
-  {$IFDEF XPTHEMES}
-  ThemeNexus.Free;
+  {$IFNDEF FPC}
+  // Can't be called here in Fpc since the WidgetSet is already destroyed at this point
+  FreeThemeNexus;
   {$ENDIF}
-{$ENDIF}
-
 end.
 

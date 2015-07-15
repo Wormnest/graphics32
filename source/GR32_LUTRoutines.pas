@@ -24,6 +24,8 @@ function MergeLuts(Luts: array of TLUT8): TLUT8;
 
 implementation
 
+uses GR32_Color;
+
 procedure ApplyLUTRGB(Dst, Src: TBitmap32; const LUT_R, LUT_G, LUT_B: TLUT8);
 var
   I: Integer;

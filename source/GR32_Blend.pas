@@ -39,12 +39,17 @@ interface
 {$I GR32.inc}
 
 uses
-  GR32;
+  GR32_Color;
 
 var
   MMX_ACTIVE: Boolean;
 
 procedure EMMS;
+
+{ TBitmap32 draw mode // jb moved from GR32 }
+type
+  TDrawMode = (dmOpaque, dmBlend, dmCustom);
+  TCombineMode = (cmBlend, cmMerge);
 
 type
 { Function Prototypes }

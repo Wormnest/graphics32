@@ -37,7 +37,7 @@ uses
 {$ELSE}
   Windows, Controls, Graphics, Forms,
 {$ENDIF}
-  Classes, SysUtils, GR32;
+  Classes, SysUtils, GR32_Color, GR32_Types, GR32;
 
 const
   { Layer Options Bits }
@@ -289,7 +289,7 @@ uses TypInfo, GR32_Image, GR32_LowLevel, GR32_Transforms;
 { mouse state mapping }
 const
   CStateMap: array [TMouseButton] of TLayerState =
-    (lsMouseLeft, lsMouseRight, lsMouseMiddle);
+    (lsMouseLeft, lsMouseRight, lsMouseMiddle{$IFDEF FPC}, lsMouseLeft, lsMouseRight{$ENDIF});
 
 type
   TImage32Access = class(TCustomImage32);

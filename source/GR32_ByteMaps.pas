@@ -36,7 +36,8 @@ uses
   {$ELSE}
   Windows, Controls, Graphics,
   {$ENDIF}
-  Classes, SysUtils, GR32, GR32_Transforms;
+  Classes, SysUtils,
+  GR32_Color, GR32_Types{, GR32_Transforms}, GR32;
 
 type
   TConversionType = (ctRed, ctGreen, ctBlue, ctAlpha, ctUniformRGB, ctWeightedRGB);

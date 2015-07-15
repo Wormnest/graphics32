@@ -136,6 +136,9 @@ type
     procedure TimerHandler(Sender: TObject); virtual;
   public
     constructor Create(AOwner: TComponent); override;
+    {$IFDEF FPC}
+    destructor Destroy; override;
+    {$ENDIF}
     property Color default clScrollBar;
     property Backgnd: TRBBackgnd read FBackgnd write SetBackgnd;
     property BorderStyle: TBorderStyle read FBorderStyle write SetBorderStyle default bsSingle;
@@ -402,6 +405,24 @@ begin
     (Cardinal(C2) and $00FF00) * W2) and $00FF0000) shr 8;
 end;
 
+{$IFDEF FPC}
+// jgb based on newer Graphics32 RangeBars implementation
+function AllocPatternBitmap(BkColor, FgColor: TColor): TBitmap;
+var B: TBitmap;
+begin
+  // Implementation partially based on GR32_RangeBars
+  B := TBitmap.Create;
+  B.Height := 2;
+  B.Width := 2;
+  // todo: check if we need to do ColorToRGB(Color) for named colors
+  B.Canvas.Pixels[0,0] := BkColor;
+  B.Canvas.Pixels[1,0] := FgColor;
+  B.Canvas.Pixels[0,1] := FgColor;
+  B.Canvas.Pixels[1,1] := BkColor;
+  Result := B;
+end;
+{$ENDIF}
+
 procedure DitherRect(Canvas: TCanvas; const R: TRect; C1, C2: TColor);
 var
   B: TBitmap;
@@ -642,6 +663,11 @@ end;
 constructor TArrowBar.Create(AOwner: TComponent);
 begin
   inherited;
+
+  {$IFDEF FPC}
+  InitializeThemeNexus;
+  {$ENDIF}
+
   ControlStyle := ControlStyle - [csAcceptsControls, csDoubleClicks] + [csOpaque];
   Width := 100;
   Height := 16;
@@ -658,6 +684,16 @@ begin
   FBorderColor := clWindowFrame;
   FShowHandleGrip := True;
 end;
+
+{$IFDEF FPC}
+destructor TArrowBar.Destroy;
+begin
+  {$IFDEF FPC}
+  FreeThemeNexus;
+  {$ENDIF}
+  inherited Destroy;
+end;
+{$ENDIF}
 
 procedure TArrowBar.DoChange;
 begin
@@ -1146,7 +1182,11 @@ begin
 {$IFDEF CLX}
     Invalidate;
 {$ELSE}
+    {$IFNDEF FPC}
     RecreateWnd;
+    {$ELSE}
+    RecreateWnd(Self);
+    {$ENDIF}
 {$ENDIF}
   end;
 end;
@@ -1246,7 +1286,11 @@ begin
 {$IFDEF CLX}
   Invalidate;
 {$ELSE}
+  {$IFNDEF FPC}
   RecreateWnd;
+  {$ELSE}
+  RecreateWnd(Self);
+  {$ENDIF}
 {$ENDIF}
 end;
 

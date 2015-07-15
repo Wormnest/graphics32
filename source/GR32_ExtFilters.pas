@@ -43,6 +43,8 @@ procedure Saturation(Bitmap: TBitmap32; Amount: Integer);
 
 implementation
 
+uses GR32_Color;
+
 procedure ApplyLutB(Bitmap: TBitmap32; Lut: TLUT8);
 var
   pb: PByte;
@@ -389,7 +391,11 @@ begin
           pc^ := tc;
           Inc(pc);
         end;
+        {$IFNDEF FPC}
         pc := Ptr(Integer(pc) + Delta);
+        {$ELSE}
+        pc := Pointer(Integer(pc) + Delta);
+        {$ENDIF}
       end;
       Inc(x, xAmount);
     end;

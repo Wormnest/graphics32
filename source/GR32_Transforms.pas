@@ -40,22 +40,26 @@ uses
   {$ELSE}
   Windows,
   {$ENDIF}
-  SysUtils, Classes, GR32, GR32_Blend;
+  SysUtils, Classes, GR32_Types, GR32_Blend;
 
-type
-  ETransformError = class(Exception);
+// jb moved to GR32_Types
+//type
+//  ETransformError = class(Exception);
+
+// jb 2015-06-23 Move these to GR32 because of circular reference problems with fpc
 
 procedure BlockTransfer(
-  Dst: TBitmap32; DstX: Integer; DstY: Integer; DstClip: TRect;
-  Src: TBitmap32; SrcRect: TRect;
+  Dst: TCustomBitmap32; DstX: Integer; DstY: Integer; DstClip: TRect;
+  Src: TCustomBitmap32; SrcRect: TRect;
   CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent = nil);
 
 
 procedure StretchTransfer(
-  Dst: TBitmap32; DstRect: TRect; DstClip: TRect;
-  Src: TBitmap32; SrcRect: TRect;
+  Dst: TCustomBitmap32; DstRect: TRect; DstClip: TRect;
+  Src: TCustomBitmap32; SrcRect: TRect;
   StretchFilter: TStretchFilter;
   CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent = nil);
+
 
 type
   TFloatMatrix = array[0..2, 0..2] of Single;     // 3x3 single precision
@@ -180,8 +184,9 @@ type
 
 function TransformPoints(Points: TArrayOfArrayOfFixedPoint; Transformation: TTransformation): TArrayOfArrayOfFixedPoint;
 
-procedure Transform(Dst, Src: TBitmap32; Transformation: TTransformation);
-procedure SetBorderTransparent(ABitmap: TBitmap32; ARect: TRect);
+// jb moved to GR32
+procedure Transform(Dst, Src: TCustomBitmap32; Transformation: TTransformation);
+procedure SetBorderTransparent(ABitmap: TCustomBitmap32; ARect: TRect);
 
 { FullEdge controls how the bitmap is resampled }
 var
@@ -191,281 +196,23 @@ implementation
 
 {$R-}{$Q-}  // switch off overflow and range checking
 
-uses GR32_LowLevel, GR32_System, Math;
+uses Math,
+  GR32_System, GR32_LowLevel, GR32_Color;
 
 type
   {provides access to proctected members of TBitmap32 by typecasting}
-  TBitmap32Access = class(TBitmap32);
+  TBitmap32Access = class(TCustomBitmap32);
 
-const
+// jb move to GR32
+{const
   SDstEmpty = 'Destination bitmap is nil or empty';
   SSrcEmpty = 'Source bitmap is nil or empty';
-  SSrcInvalid = 'Source rectangle is invalid';
+  SSrcInvalid = 'Source rectangle is invalid';}
 
 var
  BlockAverage : function (Dlx, Dly, RowSrc, OffSrc: Cardinal): TColor32;
  LinearInterpolator: function(PWX_256, PWY_256: Cardinal; C11, C21: PColor32): TColor32;
 
-
-procedure CheckBitmaps(Dst, Src: TBitmap32);
-begin
-  if not Assigned(Dst) or Dst.Empty then raise ETransformError.Create(SDstEmpty);
-  if not Assigned(Src) or Src.Empty then raise ETransformError.Create(SSrcEmpty);
-end;
-
-function CheckSrcRect(Src: TBitmap32; const SrcRect: TRect): Boolean;
-begin
-  Result := False;
-  if IsRectEmpty(SrcRect) then Exit;
-  if (SrcRect.Left < 0) or (SrcRect.Right > Src.Width) or
-    (SrcRect.Top < 0) or (SrcRect.Bottom > Src.Height) then
-    raise ETransformError.Create(SSrcInvalid);
-  Result := True;
-end;
-
-procedure BlendBlock(
-  Dst: TBitmap32; DstRect: TRect;
-  Src: TBitmap32; SrcX, SrcY: Integer;
-  CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent);
-var
-  SrcP, DstP: PColor32;
-  SP, DP: PColor32;
-  W, I, DstY: Integer;
-  BlendLine: TBlendLine;
-  BlendLineEx: TBlendLineEx;
-begin
-  { Internal routine }
-  W := DstRect.Right - DstRect.Left;
-  SrcP := Src.PixelPtr[SrcX, SrcY];
-  DstP := Dst.PixelPtr[DstRect.Left, DstRect.Top];
-
-  case CombineOp of
-    dmOpaque:
-      begin
-        for DstY := DstRect.Top to DstRect.Bottom - 1 do
-        begin
-          //Move(SrcP^, DstP^, W*4); // for FastCode
-          MoveLongWord(SrcP^, DstP^, W);
-          Inc(SrcP, Src.Width);
-          Inc(DstP, Dst.Width);
-        end;
-      end;
-    dmBlend:
-      if Src.MasterAlpha >= 255 then
-      begin
-        BlendLine := BLEND_LINE[Src.CombineMode];
-        for DstY := DstRect.Top to DstRect.Bottom - 1 do
-        begin
-          BlendLine(SrcP, DstP, W);
-          Inc(SrcP, Src.Width);
-          Inc(DstP, Dst.Width);
-        end
-      end
-      else
-      begin
-        BlendLineEx := BLEND_LINE_EX[Src.CombineMode];
-        for DstY := DstRect.Top to DstRect.Bottom - 1 do
-        begin
-          BlendLineEx(SrcP, DstP, W, Src.MasterAlpha);
-          Inc(SrcP, Src.Width);
-          Inc(DstP, Dst.Width);
-        end
-      end
-    else //  dmCustom:
-      begin
-        for DstY := DstRect.Top to DstRect.Bottom - 1 do
-        begin
-          SP := SrcP;
-          DP := DstP;
-          for I := 0 to W - 1 do
-          begin
-            CombineCallBack(SP^, DP^, Src.MasterAlpha);
-            Inc(SP); Inc(DP);
-          end;
-          Inc(SrcP, Src.Width);
-          Inc(DstP, Dst.Width);
-        end;
-      end;
-    end;
-end;
-
-procedure BlockTransfer(
-  Dst: TBitmap32; DstX: Integer; DstY: Integer; DstClip: TRect;
-  Src: TBitmap32; SrcRect: TRect;
-  CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent);
-var
-  SrcX, SrcY: Integer;
-begin
-  if Src.Empty then Exit;
-  CheckBitmaps(Src, Dst);
-
-  if (CombineOp = dmCustom) and not Assigned(CombineCallBack) then
-    CombineOp := dmOpaque;
-
-  if (CombineOp = dmBlend) and (Src.MasterAlpha = 0) then Exit;
-
-  SrcX := SrcRect.Left;
-  SrcY := SrcRect.Top;
-
-  IntersectRect(DstClip, DstClip, Dst.BoundsRect);
-  IntersectRect(SrcRect, SrcRect, Src.BoundsRect);
-  OffsetRect(SrcRect, DstX - SrcX, DstY - SrcY);
-  IntersectRect(SrcRect, DstClip, SrcRect);
-  DstClip := SrcRect;
-  OffsetRect(SrcRect, SrcX - DstX, SrcY - DstY);
-
-  if not IsRectEmpty(SrcRect) then 
-  try
-    BlendBlock(Dst, DstClip, Src, SrcRect.Left, SrcRect.Top, CombineOp, CombineCallBack);
-  finally
-    EMMS;
-  end;
-end;
-
-
-procedure StretchNearest(
-  Dst: TBitmap32; DstRect, DstClip: TRect;
-  Src: TBitmap32; SrcRect: TRect;
-  CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent);
-var
-  R: TRect;
-  SrcW, SrcH, DstW, DstH, DstClipW, DstClipH: Integer;
-  SrcY, OldSrcY: Integer;
-  I, J: Integer;
-  MapHorz: array of Integer;
-  SrcLine, DstLine: PColor32Array;
-  Buffer: TArrayOfColor32;
-  Scale: Single;
-  BlendLine: TBlendLine;
-  BlendLineEx: TBlendLineEx;
-begin
-  IntersectRect(DstClip, DstClip, MakeRect(0, 0, Dst.Width, Dst.Height));
-  IntersectRect(DstClip, DstClip, DstRect);
-  if IsRectEmpty(DstClip) then Exit;
-  IntersectRect(R, DstClip, DstRect);
-  if IsRectEmpty(R) then Exit;
-  if (SrcRect.Left < 0) or (SrcRect.Top < 0) or (SrcRect.Right > Src.Width) or
-    (SrcRect.Bottom > Src.Height) then raise Exception.Create('Invalid SrcRect');
-
-  SrcW := SrcRect.Right - SrcRect.Left;
-  SrcH := SrcRect.Bottom - SrcRect.Top;
-  DstW := DstRect.Right - DstRect.Left;
-  DstH := DstRect.Bottom - DstRect.Top;
-  DstClipW := DstClip.Right - DstClip.Left;
-  DstClipH := DstClip.Bottom - DstClip.Top;
-  try
-    if (SrcW = DstW) and (SrcH = DstH) then
-    begin
-      { Copy without resampling }
-      BlendBlock(Dst, DstClip, Src, SrcRect.Left + DstClip.Left - DstRect.Left,
-        SrcRect.Top + DstClip.Top - DstRect.Top, CombineOp, CombineCallBack);
-    end
-    else
-    begin
-      SetLength(MapHorz, DstClipW);
-
-      if DstW > 1 then
-      begin
-        if FullEdge then
-        begin
-          Scale := SrcW / DstW;
-          for I := 0 to DstClipW - 1 do
-            MapHorz[I] := Trunc(SrcRect.Left + (I + DstClip.Left - DstRect.Left) * Scale);
-        end
-        else
-        begin
-          Scale := (SrcW - 1) / (DstW - 1);
-          for I := 0 to DstClipW - 1 do
-            MapHorz[I] := Round(SrcRect.Left + (I + DstClip.Left - DstRect.Left) * Scale);
-        end;
-        Assert(MapHorz[0] >= SrcRect.Left);
-        Assert(MapHorz[DstClipW - 1] < SrcRect.Right);
-      end
-      else
-        MapHorz[0] := (SrcRect.Left + SrcRect.Right - 1) div 2;
-
-      if DstH <= 1 then Scale := 0
-      else if FullEdge then Scale := SrcH / DstH
-      else Scale := (SrcH - 1) / (DstH - 1);
-
-      if CombineOp = dmOpaque then
-      begin
-        DstLine := PColor32Array(Dst.PixelPtr[DstClip.Left, DstClip.Top]);
-        OldSrcY := -1;
-        for J := 0 to DstClipH - 1 do
-        begin
-          if DstH <= 1 then
-            SrcY := (SrcRect.Top + SrcRect.Bottom - 1) div 2
-          else if FullEdge then
-            SrcY := Trunc(SrcRect.Top + (J + DstClip.Top - DstRect.Top) * Scale)
-          else
-            SrcY := Round(SrcRect.Top + (J + DstClip.Top - DstRect.Top) * Scale);
-          if SrcY <> OldSrcY then
-          begin
-            SrcLine := Src.ScanLine[SrcY];
-            for I := 0 to DstClipW - 1 do DstLine[I] := SrcLine[MapHorz[I]];
-            OldSrcY := SrcY;
-          end
-          else
-            MoveLongWord(DstLine[-Dst.Width], DstLine[0], DstClipW);
-          Inc(DstLine, Dst.Width);
-        end;
-      end
-      else
-      begin
-        SetLength(Buffer, DstClipW);
-        DstLine := PColor32Array(Dst.PixelPtr[DstClip.Left, DstClip.Top]);
-        OldSrcY := -1;
-
-        if Src.MasterAlpha >= 255 then
-        begin
-          BlendLine := BLEND_LINE[Src.CombineMode];
-          BlendLineEx := nil; // stop compiler warnings...
-        end
-        else
-        begin
-          BlendLineEx := BLEND_LINE_EX[Src.CombineMode];
-          BlendLine := nil; // stop compiler warnings...
-        end;
-
-        for J := 0 to DstClipH - 1 do
-        begin
-          if DstH > 1 then
-          begin
-            EMMS;
-            if FullEdge then
-              SrcY := Trunc(SrcRect.Top + (J + DstClip.Top - DstRect.Top) * Scale)
-            else
-              SrcY := Round(SrcRect.Top + (J + DstClip.Top - DstRect.Top) * Scale);
-          end
-          else
-            SrcY := (SrcRect.Top + SrcRect.Bottom - 1) div 2;
-          if SrcY <> OldSrcY then
-          begin
-            SrcLine := Src.ScanLine[SrcY];
-            for I := 0 to DstClipW - 1 do Buffer[I] := SrcLine[MapHorz[I]];
-            OldSrcY := SrcY;
-          end;
-
-          if CombineOp = dmBlend then
-          begin
-            if Src.MasterAlpha >= 255 then
-              BlendLine(@Buffer[0], @DstLine[0], DstClipW)
-            else
-              BlendLineEx(@Buffer[0], @DstLine[0], DstClipW, Src.MasterAlpha);
-          end
-          else
-            for I := 0 to DstClipW - 1 do
-              CombineCallBack(Buffer[I], DstLine[I], Src.MasterAlpha);
-
-          Inc(DstLine, Dst.Width);
-        end;
-      end;
-    end;
-  finally
-    EMMS;
-  end;
-end;
 
 type
   TPointRec = record
@@ -473,9 +220,277 @@ type
     Weight: Cardinal;
   end;
 
+  // jb moved from GR32_Transforms to GR32
+  const
+    SDstEmpty = 'Destination bitmap is nil or empty';
+    SSrcEmpty = 'Source bitmap is nil or empty';
+    SSrcInvalid = 'Source rectangle is invalid';
+
+  // jb moved from GR32_Transforms 2015-06-23
+  procedure CheckBitmaps(Dst, Src: TCustomBitmap32);
+  begin
+    if not Assigned(Dst) or Dst.Empty then raise ETransformError.Create(SDstEmpty);
+    if not Assigned(Src) or Src.Empty then raise ETransformError.Create(SSrcEmpty);
+  end;
+
+  function CheckSrcRect(Src: TCustomBitmap32; const SrcRect: TRect): Boolean;
+  begin
+    Result := False;
+    if IsRectEmpty(SrcRect) then Exit;
+    if (SrcRect.Left < 0) or (SrcRect.Right > Src.Width) or
+      (SrcRect.Top < 0) or (SrcRect.Bottom > Src.Height) then
+      raise ETransformError.Create(SSrcInvalid);
+    Result := True;
+  end;
+
+  procedure BlendBlock(
+    Dst: TCustomBitmap32; DstRect: TRect;
+    Src: TCustomBitmap32; SrcX, SrcY: Integer;
+    CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent);
+  var
+    SrcP, DstP: PColor32;
+    SP, DP: PColor32;
+    W, I, DstY: Integer;
+    BlendLine: TBlendLine;
+    BlendLineEx: TBlendLineEx;
+  begin
+    { Internal routine }
+    W := DstRect.Right - DstRect.Left;
+    SrcP := Src.PixelPtr[SrcX, SrcY];
+    DstP := Dst.PixelPtr[DstRect.Left, DstRect.Top];
+
+    case CombineOp of
+      dmOpaque:
+        begin
+          for DstY := DstRect.Top to DstRect.Bottom - 1 do
+          begin
+            //Move(SrcP^, DstP^, W*4); // for FastCode
+            MoveLongWord(SrcP^, DstP^, W);
+            Inc(SrcP, Src.Width);
+            Inc(DstP, Dst.Width);
+          end;
+        end;
+      dmBlend:
+        if Src.MasterAlpha >= 255 then
+        begin
+          BlendLine := BLEND_LINE[Src.CombineMode];
+          for DstY := DstRect.Top to DstRect.Bottom - 1 do
+          begin
+            BlendLine(SrcP, DstP, W);
+            Inc(SrcP, Src.Width);
+            Inc(DstP, Dst.Width);
+          end
+        end
+        else
+        begin
+          BlendLineEx := BLEND_LINE_EX[Src.CombineMode];
+          for DstY := DstRect.Top to DstRect.Bottom - 1 do
+          begin
+            BlendLineEx(SrcP, DstP, W, Src.MasterAlpha);
+            Inc(SrcP, Src.Width);
+            Inc(DstP, Dst.Width);
+          end
+        end
+      else //  dmCustom:
+        begin
+          for DstY := DstRect.Top to DstRect.Bottom - 1 do
+          begin
+            SP := SrcP;
+            DP := DstP;
+            for I := 0 to W - 1 do
+            begin
+              CombineCallBack(SP^, DP^, Src.MasterAlpha);
+              Inc(SP); Inc(DP);
+            end;
+            Inc(SrcP, Src.Width);
+            Inc(DstP, Dst.Width);
+          end;
+        end;
+      end;
+  end;
+
+  procedure BlockTransfer(
+    Dst: TCustomBitmap32; DstX: Integer; DstY: Integer; DstClip: TRect;
+    Src: TCustomBitmap32; SrcRect: TRect;
+    CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent);
+  var
+    SrcX, SrcY: Integer;
+  begin
+    if Src.Empty then Exit;
+    CheckBitmaps(Src, Dst);
+
+    if (CombineOp = dmCustom) and not Assigned(CombineCallBack) then
+      CombineOp := dmOpaque;
+
+    if (CombineOp = dmBlend) and (Src.MasterAlpha = 0) then Exit;
+
+    SrcX := SrcRect.Left;
+    SrcY := SrcRect.Top;
+
+    IntersectRect(DstClip, DstClip, Dst.BoundsRect);
+    IntersectRect(SrcRect, SrcRect, Src.BoundsRect);
+    OffsetRect(SrcRect, DstX - SrcX, DstY - SrcY);
+    IntersectRect(SrcRect, DstClip, SrcRect);
+    DstClip := SrcRect;
+    OffsetRect(SrcRect, SrcX - DstX, SrcY - DstY);
+
+    if not IsRectEmpty(SrcRect) then
+    try
+      BlendBlock(Dst, DstClip, Src, SrcRect.Left, SrcRect.Top, CombineOp, CombineCallBack);
+    finally
+      EMMS;
+    end;
+  end;
+
+  procedure StretchNearest(
+    Dst: TCustomBitmap32; DstRect, DstClip: TRect;
+    Src: TCustomBitmap32; SrcRect: TRect;
+    CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent);
+  var
+    R: TRect;
+    SrcW, SrcH, DstW, DstH, DstClipW, DstClipH: Integer;
+    SrcY, OldSrcY: Integer;
+    I, J: Integer;
+    MapHorz: array of Integer;
+    SrcLine, DstLine: PColor32Array;
+    Buffer: TArrayOfColor32;
+    Scale: Single;
+    BlendLine: TBlendLine;
+    BlendLineEx: TBlendLineEx;
+  begin
+    IntersectRect(DstClip, DstClip, MakeRect(0, 0, Dst.Width, Dst.Height));
+    IntersectRect(DstClip, DstClip, DstRect);
+    if IsRectEmpty(DstClip) then Exit;
+    IntersectRect(R, DstClip, DstRect);
+    if IsRectEmpty(R) then Exit;
+    if (SrcRect.Left < 0) or (SrcRect.Top < 0) or (SrcRect.Right > Src.Width) or
+      (SrcRect.Bottom > Src.Height) then raise Exception.Create('Invalid SrcRect');
+
+    SrcW := SrcRect.Right - SrcRect.Left;
+    SrcH := SrcRect.Bottom - SrcRect.Top;
+    DstW := DstRect.Right - DstRect.Left;
+    DstH := DstRect.Bottom - DstRect.Top;
+    DstClipW := DstClip.Right - DstClip.Left;
+    DstClipH := DstClip.Bottom - DstClip.Top;
+    try
+      if (SrcW = DstW) and (SrcH = DstH) then
+      begin
+        { Copy without resampling }
+        BlendBlock(Dst, DstClip, Src, SrcRect.Left + DstClip.Left - DstRect.Left,
+          SrcRect.Top + DstClip.Top - DstRect.Top, CombineOp, CombineCallBack);
+      end
+      else
+      begin
+        SetLength(MapHorz, DstClipW);
+
+        if DstW > 1 then
+        begin
+          if FullEdge then
+          begin
+            Scale := SrcW / DstW;
+            for I := 0 to DstClipW - 1 do
+              MapHorz[I] := Trunc(SrcRect.Left + (I + DstClip.Left - DstRect.Left) * Scale);
+          end
+          else
+          begin
+            Scale := (SrcW - 1) / (DstW - 1);
+            for I := 0 to DstClipW - 1 do
+              MapHorz[I] := Round(SrcRect.Left + (I + DstClip.Left - DstRect.Left) * Scale);
+          end;
+          Assert(MapHorz[0] >= SrcRect.Left);
+          Assert(MapHorz[DstClipW - 1] < SrcRect.Right);
+        end
+        else
+          MapHorz[0] := (SrcRect.Left + SrcRect.Right - 1) div 2;
+
+        if DstH <= 1 then Scale := 0
+        else if FullEdge then Scale := SrcH / DstH
+        else Scale := (SrcH - 1) / (DstH - 1);
+
+        if CombineOp = dmOpaque then
+        begin
+          DstLine := PColor32Array(Dst.PixelPtr[DstClip.Left, DstClip.Top]);
+          OldSrcY := -1;
+          for J := 0 to DstClipH - 1 do
+          begin
+            if DstH <= 1 then
+              SrcY := (SrcRect.Top + SrcRect.Bottom - 1) div 2
+            else if FullEdge then
+              SrcY := Trunc(SrcRect.Top + (J + DstClip.Top - DstRect.Top) * Scale)
+            else
+              SrcY := Round(SrcRect.Top + (J + DstClip.Top - DstRect.Top) * Scale);
+            if SrcY <> OldSrcY then
+            begin
+              SrcLine := Src.ScanLine[SrcY];
+              for I := 0 to DstClipW - 1 do DstLine[I] := SrcLine[MapHorz[I]];
+              OldSrcY := SrcY;
+            end
+            else
+              MoveLongWord(DstLine[-Dst.Width], DstLine[0], DstClipW);
+            Inc(DstLine, Dst.Width);
+          end;
+        end
+        else
+        begin
+          SetLength(Buffer, DstClipW);
+          DstLine := PColor32Array(Dst.PixelPtr[DstClip.Left, DstClip.Top]);
+          OldSrcY := -1;
+
+          if Src.MasterAlpha >= 255 then
+          begin
+            BlendLine := BLEND_LINE[Src.CombineMode];
+            BlendLineEx := nil; // stop compiler warnings...
+          end
+          else
+          begin
+            BlendLineEx := BLEND_LINE_EX[Src.CombineMode];
+            BlendLine := nil; // stop compiler warnings...
+          end;
+
+          for J := 0 to DstClipH - 1 do
+          begin
+            if DstH > 1 then
+            begin
+              EMMS;
+              if FullEdge then
+                SrcY := Trunc(SrcRect.Top + (J + DstClip.Top - DstRect.Top) * Scale)
+              else
+                SrcY := Round(SrcRect.Top + (J + DstClip.Top - DstRect.Top) * Scale);
+            end
+            else
+              SrcY := (SrcRect.Top + SrcRect.Bottom - 1) div 2;
+            if SrcY <> OldSrcY then
+            begin
+              SrcLine := Src.ScanLine[SrcY];
+              for I := 0 to DstClipW - 1 do Buffer[I] := SrcLine[MapHorz[I]];
+              OldSrcY := SrcY;
+            end;
+
+            if CombineOp = dmBlend then
+            begin
+              if Src.MasterAlpha >= 255 then
+                BlendLine(@Buffer[0], @DstLine[0], DstClipW)
+              else
+                BlendLineEx(@Buffer[0], @DstLine[0], DstClipW, Src.MasterAlpha);
+            end
+            else
+              for I := 0 to DstClipW - 1 do
+                CombineCallBack(Buffer[I], DstLine[I], Src.MasterAlpha);
+
+            Inc(DstLine, Dst.Width);
+          end;
+        end;
+      end;
+    finally
+      EMMS;
+    end;
+  end;
+
+  { Stretch Transfer }
+
 procedure StretchHorzStretchVertLinear(
-  Dst: TBitmap32; DstRect, DstClip: TRect;
-  Src: TBitmap32; SrcRect: TRect;
+  Dst: TCustomBitmap32; DstRect, DstClip: TRect;
+  Src: TCustomBitmap32; SrcRect: TRect;
   CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent);
 //Assure DstRect is >= SrcRect, otherwise quality loss will occur
 var
@@ -801,8 +816,8 @@ end;
 
 {$WARNINGS OFF}
 procedure Resample(
-  Dst: TBitmap32; DstRect: TRect; DstClip: TRect;
-  Src: TBitmap32; SrcRect: TRect;
+  Dst: TCustomBitmap32; DstRect: TRect; DstClip: TRect;
+  Src: TCustomBitmap32; SrcRect: TRect;
   StretchFilter: TStretchFilter;
   CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent);
 type
@@ -1116,8 +1131,8 @@ begin
             iB * Area shr 24 and $FF;
 end;
 
-procedure DraftResample(Dst: TBitmap32; DstRect: TRect; DstClip: TRect;
-                        Src: TBitmap32; SrcRect: TRect;
+procedure DraftResample(Dst: TCustomBitmap32; DstRect: TRect; DstClip: TRect;
+                        Src: TCustomBitmap32; SrcRect: TRect;
                         CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent);
 var
   SrcW, SrcH,
@@ -1222,12 +1237,10 @@ begin
   EMMS;
 end;
 
-{ Stretch Transfer }
-
 {$WARNINGS OFF}
 procedure StretchTransfer(
-  Dst: TBitmap32; DstRect: TRect; DstClip: TRect;
-  Src: TBitmap32; SrcRect: TRect;
+  Dst: TCustomBitmap32; DstRect: TRect; DstClip: TRect;
+  Src: TCustomBitmap32; SrcRect: TRect;
   StretchFilter: TStretchFilter;
   CombineOp: TDrawMode; CombineCallBack: TPixelCombineEvent);
 var
@@ -1273,7 +1286,6 @@ begin
   end;
 end;
 {$WARNINGS ON}
-
 
 { A bit of linear algebra }
 
@@ -1385,7 +1397,7 @@ begin
   end;
 end;
 
-procedure Transform(Dst, Src: TBitmap32; Transformation: TTransformation);
+procedure Transform(Dst, Src: TCustomBitmap32; Transformation: TTransformation);
 var
   C, SrcAlpha: TColor32;
   R, SrcRectI, DstRect, SrcRect256: TRect;
@@ -1505,7 +1517,7 @@ begin
   Dst.Changed;
 end;
 
-procedure SetBorderTransparent(ABitmap: TBitmap32; ARect: TRect);
+procedure SetBorderTransparent(ABitmap: TCustomBitmap32; ARect: TRect);
 var
   I: Integer;
 begin

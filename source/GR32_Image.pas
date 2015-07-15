@@ -40,7 +40,8 @@ uses
 {$ELSE}
   Windows, Messages, Controls, Graphics, Forms,
 {$ENDIF}
-  Classes, SysUtils, GR32, GR32_Layers, GR32_RangeBars;
+  Classes, SysUtils,
+  GR32_Color, GR32_Types, GR32, GR32_Layers, GR32_RangeBars;
 
 const
   { Paint Stage Constants }
@@ -164,8 +165,10 @@ type
     property TabOrder;
     property TabStop;
     property Visible;
+{$IFNDEF FPC}
 {$IFNDEF CLX}
     property OnCanResize;
+{$ENDIF}
 {$ENDIF}
     property OnClick;
 {$IFDEF DELPHI5}
@@ -320,8 +323,10 @@ type
     property TabStop;
     property Visible;
     property OnBitmapResize;
+{$IFNDEF FPC}
 {$IFNDEF CLX}
     property OnCanResize;
+{$ENDIF}
 {$ENDIF}
     property OnClick;
     property OnChange;
@@ -440,8 +445,10 @@ type
     property TabStop;
     property Visible;
     property OnBitmapResize;
+{$IFNDEF FPC}
 {$IFNDEF CLX}
     property OnCanResize;
+{$ENDIF}
 {$ENDIF}
     property OnClick;
     property OnChange;
@@ -519,7 +526,7 @@ type
 
 implementation
 
-uses Math, TypInfo, GR32_System;
+uses Math, TypInfo, GR32_System, GR32_Blend;
 
 type
   TBitmap32Access = class(TBitmap32);
@@ -629,8 +636,11 @@ begin
   FBuffer := TBitmap32.Create;
   FBuffer.BeginUpdate; // just to speed the things up a little
   FBufferOversize := 40;
+  { Setting a initial size here will cause the control to crash under LCL }
+  {$IFNDEF FPC}
   Height := 192;
   Width := 192;
+  {$ENDIF}
 end;
 
 destructor TCustomPaintBox32.Destroy;
@@ -1629,6 +1639,10 @@ constructor TCustomImgView32.Create(AOwner: TComponent);
 begin
   inherited;
 
+  {$IFDEF FPC}
+  InitializeThemeNexus;
+  {$ENDIF}
+
   HScroll := TCustomRangeBar.Create(Self);
   VScroll := TCustomRangeBar.Create(Self);
 
@@ -1669,6 +1683,9 @@ end;
 destructor TCustomImgView32.Destroy;
 begin
   FScrollBars.Free;
+  {$IFDEF FPC}
+  FreeThemeNexus;
+  {$ENDIF}
   inherited;
 end;
 

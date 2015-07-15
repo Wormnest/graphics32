@@ -29,16 +29,10 @@ interface
 
 {$I GR32.inc}
 
-uses
-  {$IFDEF CLX}
-  QGraphics,
-  {$ELSE}
-  Graphics,
-  {$ENDIF}
-  GR32;
 
-{ Clamp function restricts Value to [0..255] range }
-function Clamp(const Value: Integer): TColor32; {$IFDEF USEINLINING} inline; {$ENDIF}
+// jb moved to GR32_Color
+//{ Clamp function restricts Value to [0..255] range }
+//function Clamp(const Value: Integer): TColor32; {$IFDEF USEINLINING} inline; {$ENDIF}
 
 { An analogue of FillChar for 32 bit values }
 procedure FillLongword(var X; Count: Integer; Value: Longword);
@@ -72,8 +66,9 @@ function SAR_13(Value: Integer): Integer;
 function SAR_14(Value: Integer): Integer;
 function SAR_16(Value: Integer): Integer;
 
-{ ColorSwap exchanges ARGB <-> ABGR and fill A with $FF }
-function ColorSwap(WinColor: TColor): TColor32;
+// jb moved to GR32_Color
+//{ ColorSwap exchanges ARGB <-> ABGR and fill A with $FF }
+//function ColorSwap(WinColor: TColor): TColor32;
 
 { MulDiv a faster implementation of Windows.MulDiv funtion }
 function MulDiv(Multiplicand, Multiplier, Divisor: Integer): Integer;
@@ -82,13 +77,14 @@ implementation
 
 {$R-}{$Q-}  // switch off overflow and range checking
 
+(**
 function Clamp(const Value: Integer): TColor32;
 begin
   if Value < 0 then Result := 0
   else if Value > 255 then Result := 255
   else Result := Value;
 end;
-
+**)
 procedure FillLongword(var X; Count: Integer; Value: Longword);
 asm
 // EAX = X
@@ -215,6 +211,7 @@ asm
         SAR EAX,16
 end;
 
+(**
 { Colorswap exchanges ARGB <-> ABGR and fill A with $FF }
 function ColorSwap(WinColor: TColor): TColor32;
 asm
@@ -225,7 +222,7 @@ asm
         MOV     AL, $FF
         ROR     EAX,8
 end;
-
+**)
 function MulDiv(Multiplicand, Multiplier, Divisor: Integer): Integer;
 asm
         PUSH    EBX             // Imperative save

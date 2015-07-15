@@ -40,7 +40,8 @@ uses
 {$ELSE}
   Windows,
 {$ENDIF}
-  Classes, SysUtils, GR32, GR32_LowLevel, GR32_Blend, GR32_Transforms;
+  Classes, SysUtils,
+  GR32_Color, GR32_LowLevel, GR32_Blend, GR32_Types, GR32, GR32_Transforms;
 
 { Polylines }
 
