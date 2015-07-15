@@ -30,17 +30,21 @@ interface
 {$I GR32.inc}
 
 uses
-  Classes, SysUtils, Consts,
+  Classes, SysUtils, {$IFNDEF FPC}Consts,{$ENDIF}
 {$IFDEF CLX}
   QGraphics, QDialogs, QForms,
 {$ELSE}
   Windows, Registry, Graphics, Dialogs, Forms,
 {$ENDIF}
-  GR32, GR32_Image,
-{$IFDEF COMPILER6}
-  DesignIntf, DesignEditors
+  GR32_Color,
+{$IFNDEF FPC}
+  {$IFDEF COMPILER6}
+    DesignIntf, DesignEditors
+  {$ELSE}
+    DsgnIntf
+  {$ENDIF}
 {$ELSE}
-  DsgnIntf
+  PropEdits
 {$ENDIF};
 
 type

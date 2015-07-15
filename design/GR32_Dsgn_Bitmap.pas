@@ -39,12 +39,16 @@ uses
   Windows, Graphics, Controls, Forms, Dialogs, ExtCtrls, StdCtrls, ExtDlgs,
   ComCtrls, Menus, ToolWin, Registry, ImgList, Clipbrd,
 {$ENDIF}
-  SysUtils, Classes, Consts,
+  SysUtils, Classes, {$IFNDEF FPC}Consts,{$ELSE}RtlConsts,{$ENDIF}
   GR32, GR32_Image, GR32_Layers, GR32_Filters,
-{$IFDEF COMPILER6}
-  DesignIntf, DesignEditors
+{$IFNDEF FPC}
+  {$IFDEF COMPILER6}
+    DesignIntf, DesignEditors
+  {$ELSE}
+    DsgnIntf
+  {$ENDIF}
 {$ELSE}
-  DsgnIntf
+  PropEdits, ComponentEditors
 {$ENDIF};
 
 type
@@ -137,7 +141,11 @@ implementation
 {$IFDEF CLX}
 {$R *.xfm}
 {$ELSE}
-{$R *.dfm}
+  {$IFNDEF FPC}
+  {$R *.dfm}
+  {$ELSE}
+  {$R *.lfm}
+  {$ENDIF}
 {$ENDIF}
 
 { TPictureEditorForm }
@@ -381,7 +389,9 @@ begin
       if BitmapEditor.Execute then
       begin
         SetOrdValue(Longint(BitmapEditor.Bitmap32));
+        {$IFNDEF FPC}
         Designer.Modified;
+        {$ENDIF}
       end;
     finally
       BitmapEditor.Free;

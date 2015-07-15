@@ -31,10 +31,14 @@ interface
 
 uses
   Classes, TypInfo,
-{$IFDEF COMPILER6}
+{$IFNDEF FPC}
+  {$IFDEF COMPILER6}
   DesignIntf
-{$ELSE}
+  {$ELSE}
   DsgnIntf
+  {$ENDIF}
+{$ELSE}
+  PropEdits, ComponentEditors
 {$ENDIF};
 
 procedure Register;
@@ -42,12 +46,17 @@ procedure Register;
 implementation
 
 uses
+  GR32_Color,
   GR32,
   GR32_Dsgn_Color,
   GR32_Dsgn_Bitmap,
   GR32_Image,
   GR32_Layers,
   GR32_RangeBars;
+
+{$IFDEF FPC}
+{$R 'GR32_Reg.dcr'}
+{$ENDIF}
 
 { Registration }
 procedure Register;
