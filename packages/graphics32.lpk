@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Package Version="4">
+    <PathDelim Value="\"/>
+    <Name Value="Graphics32"/>
+    <CompilerOptions>
+      <Version Value="11"/>
+      <PathDelim Value="\"/>
+      <SearchPaths>
+        <IncludeFiles Value="..\include"/>
+        <OtherUnitFiles Value="..\source;..\Examples\Vcl\ProgressBar_Ex"/>
+        <UnitOutputDirectory Value="..\lib\$(TargetCPU)-$(TargetOS)"/>
+      </SearchPaths>
+      <Parsing>
+        <SyntaxOptions>
+          <SyntaxMode Value="Delphi"/>
+          <CStyleOperator Value="False"/>
+        </SyntaxOptions>
+      </Parsing>
+    </CompilerOptions>
+    <Version Major="1" Minor="7"/>
+    <Files Count="18">
+      <Item1>
+        <Filename Value="..\include\GR32.inc"/>
+        <Type Value="Include"/>
+      </Item1>
+      <Item2>
+        <Filename Value="..\source\GR32_System.pas"/>
+        <UnitName Value="GR32_System"/>
+      </Item2>
+      <Item3>
+        <Filename Value="..\source\GR32_LowLevel.pas"/>
+        <UnitName Value="GR32_LowLevel"/>
+      </Item3>
+      <Item4>
+        <Filename Value="..\source\gr32_color.pas"/>
+        <UnitName Value="GR32_Color"/>
+      </Item4>
+      <Item5>
+        <Filename Value="..\source\gr32_types.pas"/>
+        <UnitName Value="GR32_Types"/>
+      </Item5>
+      <Item6>
+        <Filename Value="..\source\GR32.pas"/>
+        <UnitName Value="GR32"/>
+      </Item6>
+      <Item7>
+        <Filename Value="..\source\GR32_Blend.pas"/>
+        <UnitName Value="GR32_Blend"/>
+      </Item7>
+      <Item8>
+        <Filename Value="..\source\GR32_Transforms.pas"/>
+        <UnitName Value="GR32_Transforms"/>
+      </Item8>
+      <Item9>
+        <Filename Value="..\source\GR32_ByteMaps.pas"/>
+        <UnitName Value="GR32_ByteMaps"/>
+      </Item9>
+      <Item10>
+        <Filename Value="..\source\GR32_Filters.pas"/>
+        <UnitName Value="GR32_Filters"/>
+      </Item10>
+      <Item11>
+        <Filename Value="..\source\GR32_DrawingEx.pas"/>
+        <UnitName Value="GR32_DrawingEx"/>
+      </Item11>
+      <Item12>
+        <Filename Value="..\source\GR32_Layers.pas"/>
+        <UnitName Value="GR32_Layers"/>
+      </Item12>
+      <Item13>
+        <Filename Value="..\source\GR32_RangeBars.pas"/>
+        <UnitName Value="GR32_RangeBars"/>
+      </Item13>
+      <Item14>
+        <Filename Value="..\source\GR32_Image.pas"/>
+        <UnitName Value="GR32_Image"/>
+      </Item14>
+      <Item15>
+        <Filename Value="..\source\GR32_Polygons.pas"/>
+        <UnitName Value="GR32_Polygons"/>
+      </Item15>
+      <Item16>
+        <Filename Value="..\source\GR32_ExtFilters.pas"/>
+        <UnitName Value="GR32_ExtFilters"/>
+      </Item16>
+      <Item17>
+        <Filename Value="..\source\GR32_LUTRoutines.pas"/>
+        <UnitName Value="GR32_LUTRoutines"/>
+      </Item17>
+      <Item18>
+        <Filename Value="..\Examples\Vcl\ProgressBar_Ex\GR32_ProgressBar.pas"/>
+        <UnitName Value="GR32_ProgressBar"/>
+      </Item18>
+    </Files>
+    <RequiredPkgs Count="2">
+      <Item1>
+        <PackageName Value="LCL"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="FCL"/>
+      </Item2>
+    </RequiredPkgs>
+    <UsageOptions>
+      <IncludePath Value="..\include"/>
+      <UnitPath Value="$(PkgOutDir)"/>
+    </UsageOptions>
+    <PublishOptions>
+      <Version Value="2"/>
+    </PublishOptions>
+  </Package>
+</CONFIG>
