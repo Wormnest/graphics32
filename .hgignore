@@ -1,0 +1,13 @@
+syntax: glob
+*.~*
+*.dsk
+*.xfm
+examples/vcl/**.res
+**.dof
+**.cfg
+examples/vcl/**.bpr
+**.map
+**.dcu
+**.dsm
+**.drc
+**.exe

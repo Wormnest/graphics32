@@ -1,0 +1,39 @@
+package GR32_ProgressBar_DSGN_D6;
+
+{$R *.res}
+{$R '..\Examples\Vcl\ProgressBar_Ex\GR32_Reg_ProgressBar.dcr'}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DESCRIPTION 'Graphics32 ProgressBar Design Time Package'}
+{$IMPLICITBUILD ON}
+
+requires
+  designide,
+  vcl,
+  GR32_D6,
+  GR32_ProgressBar_D6,
+  rtl;
+
+contains
+  GR32_Reg_ProgressBar in '..\Examples\Vcl\ProgressBar_Ex\GR32_Reg_ProgressBar.pas';
+
+end.
