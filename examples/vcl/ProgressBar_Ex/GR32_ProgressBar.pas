@@ -28,7 +28,8 @@ unit GR32_ProgressBar;
 interface
 
 uses
-  Windows, Classes, Graphics, Forms, GR32, GR32_Image, GR32_Blend;
+  Windows, Classes, Graphics, Forms, {$IFDEF FPC}Controls,{$ENDIF}
+  GR32, GR32_Image, GR32_Blend;
 
 type
   TG32_ProgressBar = class(TCustomPaintBox32)
@@ -93,6 +94,8 @@ type
 procedure Register;
 
 implementation
+
+uses GR32_Color;
 
 procedure Register;
 begin

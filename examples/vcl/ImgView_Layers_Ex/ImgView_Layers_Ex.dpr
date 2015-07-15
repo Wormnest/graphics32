@@ -1,7 +1,7 @@
 program ImgView_Layers_Ex;
 
 uses
-  Forms,
+  Forms, {$IFDEF FPC}Interfaces,{$ENDIF}
   MainUnit in 'MainUnit.pas' {MainForm},
   NewImageUnit in 'NewImageUnit.pas' {NewImageForm},
   RGBALoaderUnit in 'RGBALoaderUnit.pas' {RGBALoaderForm};

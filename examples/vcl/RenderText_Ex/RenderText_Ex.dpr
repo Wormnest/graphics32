@@ -1,7 +1,7 @@
 program RenderText_Ex;
 
 uses
-  Forms,
+  Forms, Interfaces,
   MainUnit in 'MainUnit.pas' {Form1};
 
 {$R *.RES}

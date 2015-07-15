@@ -29,7 +29,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  Menus, ExtCtrls, JPeg, ExtDlgs, StdCtrls, GR32, GR32_Image, GR32_Layers,
+  Menus, ExtCtrls, {$IFNDEF FPC} JPeg, {$ENDIF} ExtDlgs, StdCtrls, GR32, GR32_Image, GR32_Layers,
   GR32_RangeBars, GR32_Filters, GR32_Transforms;
 
 type

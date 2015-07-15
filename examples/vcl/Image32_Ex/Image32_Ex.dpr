@@ -1,10 +1,14 @@
 program Image32_Ex;
 
+{$IFDEF FPC}
+  {$MODE Delphi}
+{$ENDIF}
+
 uses
-  Forms,
+  Forms, Interfaces,
   MainUnit in 'MainUnit.pas' {Form1};
 
-{$R *.RES}
+{$R *.res}
 
 begin
   Application.Initialize;
