@@ -444,11 +444,15 @@ procedure FreeThemeNexus;
 begin
   {$IFNDEF CLX}
     {$IFDEF XPTHEMES}
+    {$IFDEF FPC}
     if NexusUsageCount = 1 then begin
+    {$ENDIF}
       ThemeNexus.Free;
       ThemeNexus := nil;
+    {$IFDEF FPC}
     end;
     Dec(NexusUsageCount);
+    {$ENDIF}
     {$ENDIF}
   {$ENDIF}
 end;
