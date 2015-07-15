@@ -1,3 +1,13 @@
+{$IFDEF FPC}
+  {$mode delphi}
+  {$DEFINE INLININGSUPPORTED}
+  {$DEFINE COMPILER2005}
+  {$DEFINE COMPILER7}
+  {$DEFINE COMPILER6}
+  {$DEFINE COMPILER5}
+  {$DEFINE COMPILER4}
+{$ENDIF}
+
 {$IFDEF VER170}
   {$DEFINE INLININGSUPPORTED}
   {$DEFINE COMPILER2005}
@@ -84,4 +94,11 @@
 
 {$R-}{$Q-}  // switch off overflow and range checking
 
+{$IFNDEF FPC}
 {$DEFINE XPTHEMES} // enable support for windows xp themes
+{$ELSE}
+  {$IFDEF WINDOWS}
+  {$DEFINE XPTHEMES} // enable support for windows xp themes
+  {$ENDIF}
+{$ENDIF}
+
