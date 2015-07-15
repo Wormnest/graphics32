@@ -69,7 +69,7 @@ interface
 
 
 uses
-  GR32,GR32_Blend;
+  GR32_Color, GR32_Blend, GR32;
 
 
 type

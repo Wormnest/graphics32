@@ -42,7 +42,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics,
-  GR32;
+  GR32_Types;
 
 const
 { PI constants }
