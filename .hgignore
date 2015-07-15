@@ -11,3 +11,8 @@ examples/vcl/**.bpr
 **.dsm
 **.drc
 **.exe
+**.o
+**.ppu
+**.bak
+**.compiled
+lib

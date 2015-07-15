@@ -34,6 +34,10 @@ procedure Register;
 
 implementation
 
+{$IFDEF FPC}
+{$R 'GR32_Reg_ProgressBar.dcr'}
+{$ENDIF}
+
 procedure Register;
 begin
   RegisterComponents('Graphics32', [TG32_ProgressBar]);
