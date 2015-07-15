@@ -30,7 +30,7 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   Menus, ExtCtrls, {$IFNDEF FPC} JPeg, {$ENDIF} ExtDlgs, StdCtrls, GR32, GR32_Image, GR32_Layers,
-  GR32_RangeBars, GR32_Filters, GR32_Transforms;
+  GR32_RangeBars, GR32_Filters, GR32_Transforms, GR32_Types, GR32_Color;
 
 type
   TMainForm = class(TForm)
@@ -149,7 +149,7 @@ var
 
 implementation
 
-uses NewImageUnit, RGBALoaderUnit, Math, GR32_LowLevel, Printers;
+uses NewImageUnit, RGBALoaderUnit, Math, GR32_LowLevel, GR32_Blend, Printers;
 
 {$R *.DFM}
 

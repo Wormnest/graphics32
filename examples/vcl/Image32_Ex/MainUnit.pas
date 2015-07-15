@@ -58,6 +58,8 @@ var
 
 implementation
 
+uses GR32_Types;
+
 {$IFnDEF FPC}
   {$R *.dfm}
 {$ELSE}

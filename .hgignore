@@ -16,3 +16,4 @@ examples/vcl/**.bpr
 **.bak
 **.compiled
 lib
+**.lps

@@ -9,7 +9,6 @@
       <Title Value="Image32_Ex"/>
       <ResourceType Value="res"/>
       <UseXPManifest Value="True"/>
-      <Icon Value="0"/>
     </General>
     <i18n>
       <EnableI18N LFM="False"/>
@@ -44,8 +43,9 @@
       <Unit1>
         <Filename Value="MainUnit.pas"/>
         <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form1"/>
         <HasResources Value="True"/>
-        <UnitName Value="MainUnit"/>
+        <ResourceBaseClass Value="Form"/>
       </Unit1>
     </Units>
   </ProjectOptions>
