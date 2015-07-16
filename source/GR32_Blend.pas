@@ -125,10 +125,11 @@ uses Math, GR32_System;
 
 const bias = $00800080;
 
-function _CombineReg(X, Y, W: TColor32): TColor32;
+function _CombineReg(X, Y, W: TColor32): TColor32; {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
   // combine RGBA channels of colors X and Y with the weight of X given in W
   // Result Z = W * X + (1 - W) * Y (all channels are combined, including alpha)
+{$IFDEF TARGET_x86}
   // EAX <- X
   // EDX <- Y
   // ECX <- W
@@ -177,10 +178,61 @@ asm
 
 @1:     MOV     EAX,EDX
 @2:     RET
+{$ENDIF}
+
+{$IFDEF TARGET_x64}
+  // ECX <- X
+  // EDX <- Y
+  // R8D <- W
+
+  // W = 0 or $FF?
+        TEST    R8D,R8D
+        JZ      @1              // W = 0 ?  => Result := EDX
+        MOV     EAX,ECX         // EAX  <-  Xa Xr Xg Xb
+        CMP     R8B,$FF         // W = $FF ?  => Result := EDX
+        JE      @2
+
+  // P = W * X
+        AND     EAX,$00FF00FF   // EAX  <-  00 Xr 00 Xb
+        AND     ECX,$FF00FF00   // ECX  <-  Xa 00 Xg 00
+        IMUL    EAX,R8D         // EAX  <-  Pr ** Pb **
+        SHR     ECX,8           // ECX  <-  00 Xa 00 Xg
+        IMUL    ECX,R8D         // ECX  <-  Pa ** Pg **
+        ADD     EAX,bias
+        AND     EAX,$FF00FF00   // EAX  <-  Pa 00 Pg 00
+        SHR     EAX,8           // EAX  <-  00 Pr 00 Pb
+        ADD     ECX,bias
+        AND     ECX,$FF00FF00   // ECX  <-  Pa 00 Pg 00
+        OR      EAX,ECX         // EAX  <-  Pa Pr Pg Pb
+
+  // W = 1 - W; Q = W * Y
+        XOR     R8D,$000000FF   // R8D  <-  1 - R8D
+        MOV     ECX,EDX         // ECX  <-  Ya Yr Yg Yb
+        AND     EDX,$00FF00FF   // EDX  <-  00 Yr 00 Yb
+        AND     ECX,$FF00FF00   // ECX  <-  Ya 00 Yg 00
+        IMUL    EDX,R8D         // EDX  <-  Qr ** Qb **
+        SHR     ECX,8           // ECX  <-  00 Ya 00 Yg
+        IMUL    ECX,R8D         // ECX  <-  Qa ** Qg **
+        ADD     EDX,bias
+        AND     EDX,$FF00FF00   // EDX  <-  Qr 00 Qb 00
+        SHR     EDX,8           // EDX  <-  00 Qr ** Qb
+        ADD     ECX,bias
+        AND     ECX,$FF00FF00   // ECX  <-  Qa 00 Qg 00
+        OR      ECX,EDX         // ECX  <-  Qa Qr Qg Qb
+
+  // Z = P + Q (assuming no overflow at each byte)
+        ADD     EAX,ECX         // EAX  <-  Za Zr Zg Zb
+
+        RET
+
+@1:     MOV     EAX,EDX
+@2:
+{$ENDIF}
 end;
 
-procedure _CombineMem(F: TColor32; var B: TColor32; W: TColor32);
+procedure _CombineMem(F: TColor32; var B: TColor32; W: TColor32); {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
+{$IFDEF TARGET_x86}
   // EAX <- F
   // [EDX] <- B
   // ECX <- W
@@ -234,13 +286,64 @@ asm
 
 @2:     MOV     [EDX],EAX
         RET
+{$ENDIF}
+
+{$IFDEF TARGET_x64}
+  // ECX <- F
+  // [RDX] <- B
+  // R8 <- W
+
+  // Check W
+        TEST    R8D,R8D         // Set flags for R8
+        JZ      @2              // W = 0 ?  => Result := EDX
+        MOV     EAX,ECX         // EAX  <-  ** Fr Fg Fb
+        CMP     R8B,$FF         // W = 255? => write F
+        JZ      @1
+
+  // P = W * F
+        AND     EAX,$00FF00FF   // EAX  <-  00 Fr 00 Fb
+        AND     ECX,$FF00FF00   // ECX  <-  Fa 00 Fg 00
+        IMUL    EAX,R8D         // EAX  <-  Pr ** Pb **
+        SHR     ECX,8           // ECX  <-  00 Fa 00 Fg
+        IMUL    ECX,R8D         // ECX  <-  00 00 Pg **
+        ADD     EAX,bias
+        AND     EAX,$FF00FF00   // EAX  <-  Pr 00 Pb 00
+        SHR     EAX,8           // EAX  <-  00 Pr 00 Pb
+        ADD     ECX,bias
+        AND     ECX,$FF00FF00   // ECX  <-  Pa 00 Pg 00
+        OR      EAX,ECX         // EAX  <-  00 Pr Pg Pb
+
+  // W = 1 - W; Q = W * B
+        MOV     R9D,[RDX]
+        XOR     R8D,$000000FF   // R8D  <-  1 - R8D
+        MOV     ECX,R9D         // ECX  <-  Ba Br Bg Bb
+        AND     R9D,$00FF00FF   // R9D  <-  00 Br 00 Bb
+        AND     ECX,$FF00FF00   // ECX  <-  Ba 00 Bg 00
+        IMUL    R9D,R8D         // R9D  <-  Qr ** Qb **
+        SHR     ECX,8           // ECX  <-  00 Ba 00 Bg
+        IMUL    ECX,R8D         // ECX  <-  Qa 00 Qg **
+        ADD     R9D,bias
+        AND     R9D,$FF00FF00   // R9D  <-  Qr 00 Qb 00
+        SHR     R9D,8           // R9D  <-  00 Qr ** Qb
+        ADD     ECX,bias
+        AND     ECX,$FF00FF00   // ECX  <-  Qa 00 Qg 00
+        OR      ECX,R9D         // ECX  <-  00 Qr Qg Qb
+
+  // Z = P + Q (assuming no overflow at each byte)
+        ADD     EAX,ECX         // EAX  <-  00 Zr Zg Zb
+
+@1:     MOV     [RDX],EAX
+@2:
+
+{$ENDIF}
 end;
 
-function _BlendReg(F, B: TColor32): TColor32;
+function _BlendReg(F, B: TColor32): TColor32; {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
   // blend foregrownd color (F) to a background color (B),
   // using alpha channel value of F
   // Result Z = Fa * Frgb + (1 - Fa) * Brgb
+{$IFDEF TARGET_x86}
   // EAX <- F
   // EDX <- B
 
@@ -295,10 +398,66 @@ asm
 
 @1:     MOV     EAX,EDX
 @2:     RET
+{$ENDIF}
+
+  // EAX <- F
+  // EDX <- B
+{$IFDEF TARGET_x64}
+        MOV     RAX, RCX
+
+  // Test Fa = 255 ?
+        CMP     EAX,$FF000000   // Fa = 255 ? => Result = EAX
+        JNC     @2
+
+  // Test Fa = 0 ?
+        TEST    EAX,$FF000000   // Fa = 0 ?   => Result = EDX
+        JZ      @1
+
+  // Get weight W = Fa * M
+        MOV     ECX,EAX         // ECX  <-  Fa Fr Fg Fb
+        SHR     ECX,24          // ECX  <-  00 00 00 Fa
+
+  // P = W * F
+        MOV     R9D,EAX         // R9D  <-  Fa Fr Fg Fb
+        AND     EAX,$00FF00FF   // EAX  <-  00 Fr 00 Fb
+        AND     R9D,$FF00FF00   // R9D  <-  Fa 00 Fg 00
+        IMUL    EAX,ECX         // EAX  <-  Pr ** Pb **
+        SHR     R9D,8           // R9D  <-  00 Fa 00 Fg
+        IMUL    R9D,ECX         // R9D  <-  Pa ** Pg **
+        ADD     EAX,bias
+        AND     EAX,$FF00FF00   // EAX  <-  Pr 00 Pb 00
+        SHR     EAX,8           // EAX  <-  00 Pr ** Pb
+        ADD     R9D,bias
+        AND     R9D,$FF00FF00   // R9D  <-  Pa 00 Pg 00
+        OR      EAX,R9D         // EAX  <-  Pa Pr Pg Pb
+
+  // W = 1 - W; Q = W * B
+        XOR     ECX,$000000FF   // ECX  <-  1 - ECX
+        MOV     R9D,EDX         // R9D  <-  Ba Br Bg Bb
+        AND     EDX,$00FF00FF   // EDX  <-  00 Br 00 Bb
+        AND     R9D,$FF00FF00   // R9D  <-  Ba 00 Bg 00
+        IMUL    EDX,ECX         // EDX  <-  Qr ** Qb **
+        SHR     R9D,8           // R9D  <-  00 Ba 00 Bg
+        IMUL    R9D,ECX         // R9D  <-  Qa ** Qg **
+        ADD     EDX,bias
+        AND     EDX,$FF00FF00   // EDX  <-  Qr 00 Qb 00
+        SHR     EDX,8           // EDX  <-  00 Qr ** Qb
+        ADD     R9D,bias
+        AND     R9D,$FF00FF00   // R9D  <-  Qa 00 Qg 00
+        OR      R9D,EDX         // R9D  <-  Qa Qr Qg Qb
+
+  // Z = P + Q (assuming no overflow at each byte)
+        ADD     EAX,R9D         // EAX  <-  Za Zr Zg Zb
+        RET
+
+@1:     MOV     EAX,EDX
+@2:
+{$ENDIF}
 end;
 
-procedure _BlendMem(F: TColor32; var B: TColor32);
+procedure _BlendMem(F: TColor32; var B: TColor32); {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
+{$IFDEF TARGET_x86}
   // EAX <- F
   // [EDX] <- B
 
@@ -358,9 +517,68 @@ asm
 
 @1:     MOV     [EDX],EAX
 @2:     RET
+{$ENDIF}
+
+{$IFDEF TARGET_x64}
+  // ECX <- F
+  // [RDX] <- B
+
+  // Test Fa = 0 ?
+        TEST    ECX,$FF000000   // Fa = 0 ?   => do not write
+        JZ      @2
+
+        MOV     EAX, ECX        // EAX  <-  Fa Fr Fg Fb
+
+        // Get weight W = Fa * M
+        SHR     ECX,24          // ECX  <-  00 00 00 Fa
+
+        // Test Fa = 255 ?
+        CMP     ECX,$FF
+        JZ      @1
+
+  // P = W * F
+        MOV     R8D,EAX         // R8D  <-  Fa Fr Fg Fb
+        AND     EAX,$00FF00FF   // EAX  <-  00 Fr 00 Fb
+        AND     R8D,$FF00FF00   // R8D  <-  Fa 00 Fg 00
+        IMUL    EAX,ECX         // EAX  <-  Pr ** Pb **
+        SHR     R8D,8           // R8D  <-  00 Fa 00 Fg
+        IMUL    R8D,ECX         // R8D  <-  Pa ** Pg **
+        ADD     EAX,bias
+        AND     EAX,$FF00FF00   // EAX  <-  Pr 00 Pb 00
+        SHR     EAX,8           // EAX  <-  00 Pr ** Pb
+        ADD     R8D,bias
+        AND     R8D,$FF00FF00   // R8D  <-  Pa 00 Pg 00
+        OR      EAX,R8D         // EAX  <-  Pa Pr Pg Pb
+
+        MOV     R9D,[RDX]
+
+  // W = 1 - W; Q = W * B
+        XOR     ECX,$000000FF   // ECX  <-  1 - ECX
+        MOV     R8D,R9D         // R8D  <-  Ba Br Bg Bb
+        AND     R9D,$00FF00FF   // R9D  <-  00 Br 00 Bb
+        AND     R8D,$FF00FF00   // R8D  <-  Ba 00 Bg 00
+        IMUL    R9D,ECX         // R9D  <-  Qr ** Qb **
+        SHR     R8D,8           // R8D  <-  00 Ba 00 Bg
+        IMUL    R8D,ECX         // R8D  <-  Qa ** Qg **
+        ADD     R9D,bias
+        AND     R9D,$FF00FF00   // R9D  <-  Qr 00 Qb 00
+        SHR     R9D,8           // R9D  <-  00 Qr ** Qb
+        ADD     R8D,bias
+        AND     R8D,$FF00FF00   // R8D  <-  Qa 00 Qg 00
+        OR      R8D,R9D         // R8D  <-  Qa Qr Qg Qb
+
+  // Z = P + Q (assuming no overflow at each byte)
+        ADD     EAX,R8D         // EAX  <-  Za Zr Zg Zb
+
+        MOV     [RDX],EAX
+        RET
+
+@1:     MOV     [RDX],EAX
+@2:
+{$ENDIF}
 end;
 
-function _BlendRegEx(F, B, M: TColor32): TColor32;
+function _BlendRegEx(F, B, M: TColor32): TColor32; {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
   // blend foregrownd color (F) to a background color (B),
   // using alpha channel value of F multiplied by master alpha (M)
@@ -370,7 +588,9 @@ asm
   // EDX <- B
   // ECX <- M
 
-  // Check Fa > 0 ?
+{$IFDEF TARGET_x86}
+
+// Check Fa > 0 ?
         TEST    EAX,$FF000000   // Fa = 0? => Result := EDX
         JZ      @2
 
@@ -422,10 +642,61 @@ asm
 @1:     POP     EBX
 @2:     MOV     EAX,EDX
         RET
+{$ENDIF}
+
+{$IFDEF TARGET_x64}
+        MOV     EAX,ECX         // EAX  <-  Fa Fr Fg Fb
+        TEST    EAX,$FF000000   // Fa = 0? => Result := EDX
+        JZ      @1
+
+  // Get weight W = Fa * M
+        INC     R8D             // 255:256 range bias
+        SHR     ECX,24          // ECX  <-  00 00 00 Fa
+        IMUL    R8D,ECX         // R8D  <-  00 00  W **
+        SHR     R8D,8           // R8D  <-  00 00 00  W
+        JZ      @1              // W = 0 ?  => Result := EDX
+
+  // P = W * F
+        MOV     ECX,EAX         // ECX  <-  ** Fr Fg Fb
+        AND     EAX,$00FF00FF   // EAX  <-  00 Fr 00 Fb
+        AND     ECX,$0000FF00   // ECX  <-  00 00 Fg 00
+        IMUL    EAX,R8D         // EAX  <-  Pr ** Pb **
+        SHR     ECX,8           // ECX  <-  00 00 00 Fg
+        IMUL    ECX,R8D         // ECX  <-  00 00 Pg **
+        ADD     EAX,bias
+        AND     EAX,$FF00FF00   // EAX  <-  Pr 00 Pb 00
+        SHR     EAX,8           // EAX  <-  00 Pr ** Pb
+        ADD     ECX,bias
+        AND     ECX,$0000FF00   // ECX  <-  00 00 Pg 00
+        OR      EAX,ECX         // EAX  <-  00 Pr Pg Pb
+
+  // W = 1 - W; Q = W * B
+        XOR     R8D,$000000FF   // R8D  <-  1 - R8D
+        MOV     ECX,EDX         // ECX  <-  00 Br Bg Bb
+        AND     EDX,$00FF00FF   // EDX  <-  00 Br 00 Bb
+        AND     ECX,$0000FF00   // ECX  <-  00 00 Bg 00
+        IMUL    EDX,R8D         // EDX  <-  Qr ** Qb **
+        SHR     ECX,8           // ECX  <-  00 00 00 Bg
+        IMUL    ECX,R8D         // ECX  <-  00 00 Qg **
+        ADD     EDX,bias
+        AND     EDX,$FF00FF00   // EDX  <-  Qr 00 Qb 00
+        SHR     EDX,8           // EDX  <-  00 Qr ** Qb
+        ADD     ECX,bias
+        AND     ECX,$0000FF00   // ECX  <-  00 00 Qg 00
+        OR      ECX,EDX         // ECX  <-  00 Qr Qg Qb
+
+  // Z = P + Q (assuming no overflow at each byte)
+        ADD     EAX,ECX         // EAX  <-  00 Zr Zg Zb
+
+        RET
+
+@1:     MOV     EAX,EDX
+{$ENDIF}
 end;
 
-procedure _BlendMemEx(F: TColor32; var B: TColor32; M: TColor32);
+procedure _BlendMemEx(F: TColor32; var B: TColor32; M: TColor32); {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
+{$IFDEF TARGET_x86}
   // EAX <- F
   // [EDX] <- B
   // ECX <- M
@@ -484,10 +755,71 @@ asm
 
 @1:     POP     EBX
 @2:     RET
+{$ENDIF}
+
+{$IFDEF TARGET_x64}
+  // ECX <- F
+  // [RDX] <- B
+  // R8 <- M
+
+  // ECX <- F
+  // [EDX] <- B
+  // R8 <- M
+
+  // Check Fa > 0 ?
+        TEST    ECX,$FF000000   // Fa = 0? => write nothing
+        JZ      @1
+
+  // Get weight W = Fa * M
+        MOV     EAX,ECX         // EAX  <-  Fa Fr Fg Fb
+        INC     R8D             // 255:256 range bias
+        SHR     EAX,24          // EAX  <-  00 00 00 Fa
+        IMUL    R8D,EAX         // R8D <-  00 00  W **
+        SHR     R8D,8           // R8D <-  00 00 00  W
+        JZ      @1              // W = 0 ?  => write nothing
+
+  // P = W * F
+        MOV     EAX,ECX         // EAX  <-  ** Fr Fg Fb
+        AND     ECX,$00FF00FF   // ECX  <-  00 Fr 00 Fb
+        AND     EAX,$0000FF00   // EAX  <-  00 00 Fg 00
+        IMUL    ECX,R8D         // ECX  <-  Pr ** Pb **
+        SHR     EAX,8           // EAX  <-  00 00 00 Fg
+        IMUL    EAX,R8D         // EAX  <-  00 00 Pg **
+        ADD     ECX,bias
+        AND     ECX,$FF00FF00   // ECX  <-  Pr 00 Pb 00
+        SHR     ECX,8           // ECX  <-  00 Pr ** Pb
+        ADD     EAX,bias
+        AND     EAX,$0000FF00   // EAX  <-  00 00 Pg 00
+        OR      ECX,EAX         // ECX  <-  00 Pr Pg Pb
+
+  // W = 1 - W; Q = W * B
+        MOV     R9D,[RDX]
+        XOR     R8D,$000000FF   // R8D  <-  1 - R8
+        MOV     EAX,R9D         // EAX  <-  00 Br Bg Bb
+        AND     R9D,$00FF00FF   // R9D  <-  00 Br 00 Bb
+        AND     EAX,$0000FF00   // EAX  <-  00 00 Bg 00
+        IMUL    R9D,R8D         // R9D  <-  Qr ** Qb **
+        SHR     EAX,8           // EAX  <-  00 00 00 Bg
+        IMUL    EAX,R8D         // EAX  <-  00 00 Qg **
+        ADD     R9D,bias
+        AND     R9D,$FF00FF00   // R9D  <-  Qr 00 Qb 00
+        SHR     R9D,8           // R9D  <-  00 Qr ** Qb
+        ADD     EAX,bias
+        AND     EAX,$0000FF00   // EAX  <-  00 00 Qg 00
+        OR      EAX,R9D         // EAX  <-  00 Qr Qg Qb
+
+  // Z = P + Q (assuming no overflow at each byte)
+        ADD     ECX,EAX         // ECX  <-  00 Zr Zg Zb
+
+        MOV     [RDX],ECX
+
+@1:
+{$ENDIF}
 end;
 
-procedure _BlendLine(Src, Dst: PColor32; Count: Integer);
+procedure _BlendLine(Src, Dst: PColor32; Count: Integer); {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
+{$IFDEF TARGET_x86}
   // EAX <- Src
   // EDX <- Dst
   // ECX <- Count
@@ -566,6 +898,80 @@ asm
         POP     EBX
 
 @4:     RET
+{$ENDIF}
+
+{$IFDEF TARGET_x64}
+  // RCX <- Src
+  // RDX <- Dst
+  // R8 <- Count
+
+  // test the counter for zero or negativity
+        TEST    R8D,R8D
+        JS      @4
+
+        MOV     R10,RCX         // R10 <- Src
+        MOV     R11,RDX         // R11 <- Dst
+        MOV     ECX,R8D         // RCX <- Count
+
+  // loop start
+@1:
+        MOV     EAX,[R10]
+        TEST    EAX,$FF000000
+        JZ      @3              // complete transparency, proceed to next point
+
+  // Get weight W = Fa * M
+        MOV     R9D,EAX        // R9D  <-  Fa Fr Fg Fb
+        SHR     R9D,24         // R9D  <-  00 00 00 Fa
+
+  // Test Fa = 255 ?
+        CMP     R9D,$FF
+        JZ      @2
+
+  // P = W * F
+        MOV     R8D,EAX         // R8D  <-  Fa Fr Fg Fb
+        AND     EAX,$00FF00FF   // EAX  <-  00 Fr 00 Fb
+        AND     R8D,$FF00FF00   // R8D  <-  Fa 00 Fg 00
+        IMUL    EAX,R9D         // EAX  <-  Pr ** Pb **
+        SHR     R8D,8           // R8D  <-  00 Fa 00 Fg
+        IMUL    R8D,R9D         // R8D  <-  Pa ** Pg **
+        ADD     EAX,bias
+        AND     EAX,$FF00FF00   // EAX  <-  Pr 00 Pb 00
+        SHR     EAX,8           // EAX  <-  00 Pr ** Pb
+        ADD     R8D,bias
+        AND     R8D,$FF00FF00   // R8D  <-  Pa 00 Pg 00
+        OR      EAX,R8D         // EAX  <-  Pa Pr Pg Pb
+
+  // W = 1 - W; Q = W * B
+        MOV     EDX,[R11]
+        XOR     R9D,$000000FF   // R9D  <-  1 - R9D
+        MOV     R8D,EDX         // R8D  <-  Ba Br Bg Bb
+        AND     EDX,$00FF00FF   // ESI  <-  00 Br 00 Bb
+        AND     R8D,$FF00FF00   // R8D  <-  Ba 00 Bg 00
+        IMUL    EDX,R9D         // ESI  <-  Qr ** Qb **
+        SHR     R8D,8           // R8D  <-  00 Ba 00 Bg
+        IMUL    R8D,R9D         // R8D  <-  Qa ** Qg **
+        ADD     EDX,bias
+        AND     EDX,$FF00FF00   // ESI  <-  Qr 00 Qb 00
+        SHR     EDX,8           // ESI  <-  00 Qr ** Qb
+        ADD     R8D,bias
+        AND     R8D,$FF00FF00   // R8D  <-  Qa 00 Qg 00
+        OR      R8D,EDX         // R8D  <-  Qa Qr Qg Qb
+
+  // Z = P + Q (assuming no overflow at each byte)
+        ADD     EAX,R8D         // EAX  <-  Za Zr Zg Zb
+@2:
+        MOV     [R11],EAX
+
+@3:
+        ADD     R10,4
+        ADD     R11,4
+
+  // loop end
+        DEC     ECX
+        JNZ     @1
+
+@4:
+{$ENDIF}
 end;
 
 procedure _BlendLineEx(Src, Dst: PColor32; Count: Integer; M: TColor32);
@@ -617,8 +1023,9 @@ begin
   end;
 end;
 
-function M_CombineReg(X, Y, W: TColor32): TColor32;
+function M_CombineReg(X, Y, W: TColor32): TColor32; {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
+{$IFDEF TARGET_x86}
   // EAX - Color X
   // EDX - Color Y
   // ECX - Weight of X [0..255]
@@ -640,10 +1047,49 @@ asm
         db $0F,$71,$D1,$08       /// PSRLW     MM1,8
         db $0F,$67,$C8           /// PACKUSWB  MM1,MM0
         db $0F,$7E,$C8           /// MOVD      EAX,MM1
+{$ENDIF}
+
+{$IFDEF TARGET_X64}
+  // ECX - Color X
+  // EDX - Color Y
+  // R8 - Weight of X [0..255]
+  // Result := W * (X - Y) + Y
+
+        MOVD      MM1,ECX
+        PXOR      MM0,MM0
+        SHL       R8D,4
+
+        MOVD      MM2,EDX
+        PUNPCKLBW MM1,MM0
+        PUNPCKLBW MM2,MM0
+
+{$IFNDEF FPC}
+        ADD       R8,alpha_ptr
+{$ELSE}
+        ADD       R8,[RIP+alpha_ptr]
+{$ENDIF}
+
+        PSUBW     MM1,MM2
+        PMULLW    MM1,[R8]
+        PSLLW     MM2,8
+
+{$IFNDEF FPC}
+        MOV       RAX,bias_ptr
+{$ELSE}
+        MOV       RAX,[RIP+bias_ptr] // XXX : Enabling PIC by relative offsetting for x64
+{$ENDIF}
+
+        PADDW     MM2,[RAX]
+        PADDW     MM1,MM2
+        PSRLW     MM1,8
+        PACKUSWB  MM1,MM0
+        MOVD      EAX,MM1
+{$ENDIF}
 end;
 
-procedure M_CombineMem(F: TColor32; var B: TColor32; W: TColor32);
+procedure M_CombineMem(F: TColor32; var B: TColor32; W: TColor32); {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
+{$IFDEF TARGET_x86}
   // EAX - Color X
   // [EDX] - Color Y
   // ECX - Weight of X [0..255]
@@ -672,15 +1118,86 @@ asm
 @1:     RET
 
 @2:     MOV       [EDX],EAX
+{$ENDIF}
+
+{$IFDEF TARGET_x64}
+  // ECX - Color X
+  // [RDX] - Color Y
+  // R8 - Weight of X [0..255]
+  // Result := W * (X - Y) + Y
+
+        TEST      R8D,R8D            // Set flags for R8
+        JZ        @1                 // W = 0 ?  => Result := EDX
+        CMP       R8D,$FF
+        JZ        @2
+
+        MOVD      MM1,ECX
+        PXOR      MM0,MM0
+
+        SHL       R8D,4
+
+        MOVD      MM2,[RDX]
+        PUNPCKLBW MM1,MM0
+        PUNPCKLBW MM2,MM0
+
+{$IFNDEF FPC}
+        ADD       R8,alpha_ptr
+{$ELSE}
+        ADD       R8,[RIP+alpha_ptr]
+{$ENDIF}
+
+        PSUBW     MM1,MM2
+        PMULLW    MM1,[R8]
+        PSLLW     MM2,8
+
+{$IFNDEF FPC}
+        MOV       RAX,bias_ptr
+{$ELSE}
+        MOV       RAX,[RIP+bias_ptr] // XXX : Enabling PIC by relative offsetting for x64
+{$ENDIF}
+
+        PADDW     MM2,[RAX]
+        PADDW     MM1,MM2
+        PSRLW     MM1,8
+        PACKUSWB  MM1,MM0
+        MOVD      [RDX],MM1
+
+@1:     RET
+
+@2:     MOV       [RDX],RCX
+{$ENDIF}
 end;
 
-function M_BlendReg(F, B: TColor32): TColor32;
+function M_BlendReg(F, B: TColor32): TColor32; {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
   // blend foregrownd color (F) to a background color (B),
   // using alpha channel value of F
   // EAX <- F
   // EDX <- B
   // Result := Fa * (Frgb - Brgb) + Brgb
+{$IFDEF TARGET_x86}
+  // EAX <- F
+  // EDX <- B
+  // Result := Fa * (Frgb - Brgb) + Brgb
+        {$IFDEF FPC}
+        MOVD      MM0,EAX
+        PXOR      MM3,MM3
+        MOVD      MM2,EDX
+        PUNPCKLBW MM0,MM3
+        MOV       ECX,bias_ptr
+        PUNPCKLBW MM2,MM3
+        MOVQ      MM1,MM0
+        PUNPCKHWD MM1,MM1
+        PSUBW     MM0,MM2
+        PUNPCKHDQ MM1,MM1
+        PSLLW     MM2,8
+        PMULLW    MM0,MM1
+        PADDW     MM2,[ECX]
+        PADDW     MM2,MM0
+        PSRLW     MM2,8
+        PACKUSWB  MM2,MM3
+        MOVD      EAX,MM2
+        {$ELSE} // needs to work in D6 so use db
         db $0F,$6E,$C0           /// MOVD      MM0,EAX
         db $0F,$EF,$DB           /// PXOR      MM3,MM3
         db $0F,$6E,$D2           /// MOVD      MM2,EDX
@@ -698,9 +1215,40 @@ asm
         db $0F,$71,$D2,$08       /// PSRLW     MM2,8
         db $0F,$67,$D3           /// PACKUSWB  MM2,MM3
         db $0F,$7E,$D0           /// MOVD      EAX,MM2
+        {$ENDIF}
+{$ENDIF}
+
+{$IFDEF TARGET_x64}
+  // ECX <- F
+  // EDX <- B
+  // Result := Fa * (Frgb - Brgb) + Brgb
+        MOVD      MM0,ECX
+        PXOR      MM3,MM3
+        MOVD      MM2,EDX
+        PUNPCKLBW MM0,MM3
+{$IFNDEF FPC}
+        MOV       RAX,bias_ptr
+{$ELSE}
+        MOV       RAX,[RIP+bias_ptr] // XXX : Enabling PIC by relative offsetting for x64
+{$ENDIF}
+        PUNPCKLBW MM2,MM3
+        MOVQ      MM1,MM0
+        PUNPCKHWD MM1,MM1
+        PSUBW     MM0,MM2
+        PUNPCKHDQ MM1,MM1
+        PSLLW     MM2,8
+        PMULLW    MM0,MM1
+        PADDW     MM2,[RAX]
+        PADDW     MM2,MM0
+        PSRLW     MM2,8
+        PACKUSWB  MM2,MM3
+        MOVD      EAX,MM2
+{$ENDIF}
 end;
 
-procedure M_BlendMem(F: TColor32; var B: TColor32);
+{$IFDEF TARGET_x86}
+
+procedure M_BlendMem(F: TColor32; var B: TColor32); {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
   // EAX - Color X
   // [EDX] - Color Y
@@ -733,7 +1281,7 @@ asm
 @2:     MOV       [EDX],EAX
 end;
 
-function M_BlendRegEx(F, B, M: TColor32): TColor32;
+function M_BlendRegEx(F, B, M: TColor32): TColor32; {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
   // blend foregrownd color (F) to a background color (B),
   // using alpha channel value of F
@@ -773,8 +1321,11 @@ asm
         POP       EBX
 end;
 
-procedure M_BlendMemEx(F: TColor32; var B:TColor32; M: TColor32);
+{$ENDIF}
+
+procedure M_BlendMemEx(F: TColor32; var B:TColor32; M: TColor32); {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
+{$IFDEF TARGET_x86}
   // blend foregrownd color (F) to a background color (B),
   // using alpha channel value of F
   // EAX <- F
@@ -810,9 +1361,57 @@ asm
         db $0F,$7E,$0A           /// MOVD      [EDX],MM1
 @1:     POP       EBX
 @2:
+{$ENDIF}
+
+{$IFDEF TARGET_x64}
+  // blend foreground color (F) to a background color (B),
+  // using alpha channel value of F
+  // ECX <- F
+  // [EDX] <- B
+  // R8 <- M
+  // Result := M * Fa * (Frgb - Brgb) + Brgb
+        TEST      ECX,$FF000000
+        JZ        @1
+
+        MOV       EAX,ECX
+        SHR       EAX,24
+        INC       R8D             // 255:256 range bias
+        IMUL      R8D,EAX
+        SHR       R8D,8
+        JZ        @1
+
+        PXOR      MM0,MM0
+        MOVD      MM1,ECX
+        SHL       R8D,4
+        MOVD      MM2,[RDX]
+        PUNPCKLBW MM1,MM0
+        PUNPCKLBW MM2,MM0
+{$IFNDEF FPC}
+        ADD       R8,alpha_ptr
+{$ELSE}
+        ADD       R8,[RIP+alpha_ptr]
+{$ENDIF}
+        PSUBW     MM1,MM2
+        PMULLW    MM1,[R8]
+        PSLLW     MM2,8
+{$IFNDEF FPC}
+        MOV       RAX,bias_ptr
+{$ELSE}
+        MOV       RAX,[RIP+bias_ptr] // XXX : Enabling PIC by relative offsetting for x64
+{$ENDIF}
+        PADDW     MM2,[RAX]
+        PADDW     MM1,MM2
+        PSRLW     MM1,8
+        PACKUSWB  MM1,MM0
+        MOVD      [RDX],MM1
+
+@1:
+{$ENDIF}
 end;
 
-procedure M_BlendLine(Src, Dst: PColor32; Count: Integer);
+{$IFDEF TARGET_x86}
+
+procedure M_BlendLine(Src, Dst: PColor32; Count: Integer); {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
   // EAX <- Src
   // EDX <- Dst
@@ -930,6 +1529,8 @@ asm
         POP       ESI
 @4:
 end;
+
+{$ENDIF}
 
 { Merge }
 
@@ -1072,6 +1673,7 @@ begin
 end;
 
 { MMX Merge }
+{$IFDEF TARGET_x86}
 
 function M_MergeReg(F, B: TColor32): TColor32;
 asm
@@ -1189,6 +1791,7 @@ procedure M_CombMergeMem(X: TColor32; var Y: TColor32; W: TColor32);
 begin
   Y := M_MergeReg(X and $00FFFFFF or W shl 24, Y);
 end;
+{$ENDIF}
 
 { Non-MMX Color algebra versions }
 
@@ -1535,6 +2138,7 @@ begin
     CombineReg := M_CombineReg;
     CombineMem := M_CombineMem;
     BlendReg := M_BlendReg;
+    {$IFDEF TARGET_x86}
     BlendMem := M_BlendMem;
     BlendRegEx := M_BlendRegEx;
     BlendMemEx := M_BlendMemEx;
@@ -1566,6 +2170,41 @@ begin
     BLEND_LINE[cmMerge] := M_MergeLine;
     BLEND_LINE_EX[cmBlend] := M_BlendLineEx;
     BLEND_LINE_EX[cmMerge] := M_MergeLineEx;
+    {$ENDIF}
+
+    {$IFDEF TARGET_x64}
+    BlendMem := _BlendMem;
+    BlendRegEx := _BlendRegEx;
+    BlendMemEx := _BlendMemEx;
+    BlendLine := _BlendLine;
+    BlendLineEx := _BlendLineEx;
+
+    CombMergeReg := _CombMergeReg;
+    CombMergeMem := _CombMergeMem;
+    MergeReg := _MergeReg;
+    MergeMem := _MergeMem;
+    MergeRegEx := _MergeRegEx;
+    MergeMemEx := _MergeMemEx;
+    MergeLine := _MergeLine;
+    MergeLineEx := _MergeLineEx;
+
+    BLEND_MEM[cmBlend] := _BlendMem;
+    BLEND_MEM[cmMerge] := _MergeMem;
+    BLEND_REG[cmBlend] := _BlendReg;
+    BLEND_REG[cmMerge] := _MergeReg;
+    COMBINE_MEM[cmBlend] := _CombineMem;
+    COMBINE_MEM[cmMerge] := _CombMergeMem;
+    COMBINE_REG[cmBlend] := _CombineReg;
+    COMBINE_REG[cmMerge] := _CombMergeReg;
+    BLEND_MEM_EX[cmBlend] := _BlendMemEx;
+    BLEND_MEM_EX[cmMerge] := _MergeMemEx;
+    BLEND_REG_EX[cmBlend] := _BlendRegEx;
+    BLEND_REG_EX[cmMerge] := _MergeRegEx;
+    BLEND_LINE[cmBlend] := _BlendLine;
+    BLEND_LINE[cmMerge] := _MergeLine;
+    BLEND_LINE_EX[cmBlend] := _BlendLineEx;
+    BLEND_LINE_EX[cmMerge] := _MergeLineEx;
+    {$ENDIF}
 
     ColorAdd := M_ColorAdd;
     ColorSub := M_ColorSub;

@@ -130,6 +130,13 @@ uses Math,
 
 { Color construction and conversion functions }
 
+{$IFDEF PUREPASCAL}
+{$DEFINE USENATIVECODE}
+{$ENDIF}
+{$IFDEF TARGET_X64}
+{$DEFINE USENATIVECODE}
+{$ENDIF}
+
 function Color32(WinColor: TColor): TColor32; overload;
 {$IFDEF WIN_COLOR_FIX}
 var
@@ -151,22 +158,32 @@ begin
   I := WinColor and $000000FF;
   if I <> 0 then Result := Result or TColor32(Integer(I) - 1) shl 16;
 {$ELSE}
+{$IFDEF USENATIVECODE}
+  Result := $FF shl 24 + (WinColor and $FF0000) shr 16 + (WinColor and $FF00) +
+    (WinColor and $FF) shl 16;
+{$ELSE}
   asm
-        MOV    EAX,WinColor
-        BSWAP  EAX
-        MOV    AL,$FF
-        ROR    EAX,8
-        MOV    Result,EAX
+        MOV     EAX,WinColor
+        BSWAP   EAX
+        MOV     AL,$FF
+        ROR     EAX,8
+        MOV     Result,EAX
   end;
+{$ENDIF}
 {$ENDIF}
 end;
 
 function Color32(R, G, B: Byte; A: Byte = $FF): TColor32; overload;
+{$IFDEF USENATIVECODE}
+begin
+  Result := (A shl 24) or (R shl 16) or (G shl  8) or B;
+{$ELSE}
 asm
-        MOV  AH,A
-        SHL  EAX,16
-        MOV  AH,DL
-        MOV  AL,CL
+        MOV     AH, A
+        SHL     EAX, 16
+        MOV     AH, DL
+        MOV     AL, CL
+{$ENDIF}
 end;
 
 function Color32(Index: Byte; var Palette: TPalette32): TColor32; overload;
@@ -181,11 +198,21 @@ begin
 end;
 
 function WinColor(Color32: TColor32): TColor;
+{$IFDEF PUREPASCAL}
+begin
+  Result := ((Color32 and $00FF0000) shr 16) or
+             (Color32 and $0000FF00) or
+            ((Color32 and $000000FF) shl 16);
+{$ELSE}
 asm
-  // the alpha channel byte is set to zero!
-        ROL    EAX,8  // ABGR  ->  BGRA
-        XOR    AL,AL  // BGRA  ->  BGR0
-        BSWAP  EAX    // BGR0  ->  0RGB
+{$IFDEF TARGET_x64}
+        MOV     EAX, ECX
+{$ENDIF}
+        // the alpha channel byte is set to zero!
+        ROL     EAX, 8  // ABGR  ->  RGBA
+        XOR     AL, AL  // BGRA  ->  BGR0
+        BSWAP   EAX     // BGR0  ->  0RGB
+{$ENDIF}
 end;
 
 function ArrayOfColor32(Colors: array of TColor32): TArrayOfColor32;

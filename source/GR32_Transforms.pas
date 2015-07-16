@@ -952,6 +952,7 @@ end;
 {$WARNINGS ON}
 
 { Draft Resample Routines }
+{$IFDEF TARGET_x86}
 
 function BlockAverage_MMX(Dlx, Dly, RowSrc, OffSrc: Cardinal): TColor32;
 asm
@@ -1098,6 +1099,7 @@ asm
    pop        esi
    pop        ebx
 end;
+{$ENDIF}
 
 function BlockAverage_IA32(Dlx, Dly, RowSrc, OffSrc: Cardinal): TColor32;
 type
@@ -2108,14 +2110,22 @@ begin
   if ACTIVE_3DNow then
   begin
    // link 3DNow functions
+   {$IFDEF TARGET_x86}
    BlockAverage:= BlockAverage_3DNow;
+   {$ELSE}
+   BlockAverage:= BlockAverage_IA32;
+   {$ENDIF}
    LinearInterpolator:= M_LinearInterpolator;
   end
   else
   if MMX_ACTIVE then
   begin
    // link MMX functions
+   {$IFDEF TARGET_x86}
    BlockAverage:= BlockAverage_MMX;
+   {$ELSE}
+   BlockAverage:= BlockAverage_IA32;
+   {$ENDIF}
    LinearInterpolator:= M_LinearInterpolator;
   end
   else

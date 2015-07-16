@@ -160,6 +160,7 @@ uses
 
 function CPUID_Available: Boolean;
 asm
+{$IFDEF TARGET_x86}
         MOV       EDX,False
         PUSHFD
         POP       EAX
@@ -175,10 +176,29 @@ asm
 @1:     PUSH      EAX
         POPFD
         MOV       EAX,EDX
+{$ENDIF}
+{$IFDEF TARGET_x64}
+        MOV       EDX,False
+        PUSHFQ
+        POP       RAX
+        MOV       ECX,EAX
+        XOR       EAX,$00200000
+        PUSH      RAX
+        POPFQ
+        PUSHFQ
+        POP       RAX
+        XOR       ECX,EAX
+        JZ        @1
+        MOV       EDX,True
+@1:     PUSH      RAX
+        POPFQ
+        MOV       EAX,EDX
+{$ENDIF}
 end;
 
 function CPU_Signature: Integer;
 asm
+{$IFDEF TARGET_x86}
         PUSH    EBX
         MOV     EAX,1
         {$IFDEF FPC}
@@ -187,10 +207,18 @@ asm
         DW        $A20F   // CPUID
         {$ENDIF}
         POP     EBX
+{$ENDIF}
+{$IFDEF TARGET_x64}
+        PUSH      RBX
+        MOV       EAX,1
+        CPUID
+        POP       RBX
+{$ENDIF}
 end;
 
 function CPU_Features: Integer;
 asm
+{$IFDEF TARGET_x86}
         PUSH    EBX
         MOV     EAX,1
         {$IFDEF FPC}
@@ -200,10 +228,19 @@ asm
         {$ENDIF}
         POP     EBX
         MOV     EAX,EDX
+{$ENDIF}
+{$IFDEF TARGET_x64}
+        PUSH      RBX
+        MOV       EAX,1
+        CPUID
+        POP       RBX
+        MOV       EAX,EDX
+{$ENDIF}
 end;
 
 function CPU_AMDExtensionsAvailable: Boolean;
 asm
+{$IFDEF TARGET_x86}
         PUSH    EBX
         MOV     @Result, True
         MOV     EAX, $80000000
@@ -219,10 +256,25 @@ asm
         MOV     @Result, False
       @EXIT:
         POP     EBX
+{$ENDIF}
+{$IFDEF TARGET_x64}
+        PUSH      RBX
+        MOV       @Result, True
+        MOV       EAX, $80000000
+        CPUID
+        CMP       EAX, $80000000
+        JBE       @NOEXTENSION
+        JMP       @EXIT
+        @NOEXTENSION:
+        MOV       @Result, False
+        @EXIT:
+        POP       RBX
+{$ENDIF}
 end;
 
 function CPU_AMDExtFeatures: Integer;
 asm
+{$IFDEF TARGET_x86}
         PUSH    EBX
         MOV     EAX, $80000001
         {$IFDEF FPC}
@@ -232,6 +284,14 @@ asm
         {$ENDIF}
         POP     EBX
         MOV     EAX,EDX
+{$ENDIF}
+{$IFDEF TARGET_x64}
+        PUSH      RBX
+        MOV       EAX, $80000001
+        CPUID
+        POP       RBX
+        MOV       EAX,EDX
+{$ENDIF}
 end;
 
 function HasInstructionSet(const InstructionSet: TCPUInstructionSet): Boolean;

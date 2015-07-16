@@ -85,8 +85,9 @@ begin
   else Result := Value;
 end;
 **)
-procedure FillLongword(var X; Count: Integer; Value: Longword);
+procedure FillLongword(var X; Count: Integer; Value: Longword); {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
+{$IFDEF TARGET_x86}
 // EAX = X
 // EDX = Count
 // ECX = Value
@@ -101,10 +102,31 @@ asm
         REP     STOSD    // Fill count dwords
 @exit:
         POP     EDI
+{$ENDIF}
+{$IFDEF TARGET_x64}
+        // ECX = X;   EDX = Count;   R8 = Value
+        PUSH    RDI
+
+        MOV     RDI,RCX  // Point EDI to destination
+        MOV     RAX,R8   // copy value from R8 to RAX (EAX)
+        MOV     ECX,EDX  // copy count to ECX
+        TEST    ECX,ECX
+        JS      @Exit
+
+        REP     STOSD    // Fill count dwords
+@Exit:
+        POP     RDI
+{$ENDIF}
 end;
 
 procedure MoveLongword(const Source; var Dest; Count: Integer);
+{$IFDEF USEMOVE}
+begin
+  Move(Source, Dest, Count shl 2);
+{$ELSE}
+{$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
+{$IFDEF TARGET_x86}
 // EAX = Source
 // EDX = Dest
 // ECX = Count
@@ -121,18 +143,49 @@ asm
 @exit:
         POP     EDI
         POP     ESI
+{$ENDIF}
+
+{$IFDEF TARGET_x64}
+        // RCX = Source;   RDX = Dest;   R8 = Count
+        PUSH    RSI
+        PUSH    RDI
+
+        MOV     RSI,RCX
+        MOV     RDI,RDX
+        MOV     RCX,R8
+        CMP     RDI,RSI
+        JE      @exit
+
+        REP     MOVSD
+@exit:
+        POP     RDI
+        POP     RSI
+{$ENDIF}
+{$ENDIF}
 end;
 
 procedure Swap(var A, B: Integer);
+{$IFDEF TARGET_x86}
+{$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
 // EAX = [A]
 // EDX = [B]
         MOV     ECX,[EAX]     // ECX := [A]
         XCHG    ECX,[EDX]     // ECX <> [B];
         MOV     [EAX],ECX     // [A] := ECX
+{$ELSE}
+var
+  T: Integer;
+begin
+  T := A;
+  A := B;
+  B := T;
+{$ENDIF}
 end;
 
 procedure TestSwap(var A, B: Integer);
+{$IFDEF TARGET_x86}
+{$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
 // EAX = [A]
 // EDX = [B]
@@ -142,6 +195,17 @@ asm
         XCHG    ECX,[EDX]     // ECX <-> [B];
         MOV     [EAX],ECX     // [A] := ECX
 @exit:
+{$ELSE}
+var
+  T: Integer;
+begin
+  if B < A then
+  begin
+    T := A;
+    A := B;
+    B := T;
+  end;
+{$ENDIF}
 end;
 
 function TestClip(var A, B: Integer; const Size: Integer): Boolean;
@@ -177,38 +241,101 @@ end;
 
 { shift right with sign conservation }
 function SAR_4(Value: Integer): Integer;
+{$IFDEF PUREPASCAL}
+begin
+  Result := Value div 16;
+{$ELSE}
+{$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
-        SAR EAX,4
+{$IFDEF TARGET_x64}
+        MOV       EAX,ECX
+{$ENDIF}
+        SAR       EAX,4
+{$ENDIF}
 end;
 
 function SAR_8(Value: Integer): Integer;
+{$IFDEF PUREPASCAL}
+begin
+  Result := Value div 256;
+{$ELSE}
+{$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
-        SAR EAX,8
+{$IFDEF TARGET_x64}
+        MOV       EAX,ECX
+{$ENDIF}
+        SAR       EAX,8
+{$ENDIF}
 end;
 
 function SAR_9(Value: Integer): Integer;
+{$IFDEF PUREPASCAL}
+begin
+  Result := Value div 512;
+{$ELSE}
+{$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
-        SAR EAX,9
+{$IFDEF TARGET_x64}
+        MOV       EAX,ECX
+{$ENDIF}
+        SAR       EAX,9
+{$ENDIF}
 end;
 
 function SAR_12(Value: Integer): Integer;
+{$IFDEF PUREPASCAL}
+begin
+  Result := Value div 4096;
+{$ELSE}
+{$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
-        SAR EAX,12
+{$IFDEF TARGET_x64}
+        MOV       EAX,ECX
+{$ENDIF}
+        SAR       EAX,12
+{$ENDIF}
 end;
 
 function SAR_13(Value: Integer): Integer;
+{$IFDEF PUREPASCAL}
+begin
+  Result := Value div 8192;
+{$ELSE}
+{$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
-        SAR EAX,13
+{$IFDEF TARGET_x64}
+        MOV       EAX,ECX
+{$ENDIF}
+        SAR       EAX,13
+{$ENDIF}
 end;
 
 function SAR_14(Value: Integer): Integer;
+{$IFDEF PUREPASCAL}
+begin
+  Result := Value div 16384;
+{$ELSE}
+{$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
-        SAR EAX,14
+{$IFDEF TARGET_x64}
+        MOV       EAX,ECX
+{$ENDIF}
+        SAR       EAX,14
+{$ENDIF}
 end;
 
 function SAR_16(Value: Integer): Integer;
+{$IFDEF PUREPASCAL}
+begin
+  Result := Value div 65536;
+{$ELSE}
+{$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
-        SAR EAX,16
+{$IFDEF TARGET_x64}
+        MOV       EAX,ECX
+{$ENDIF}
+        SAR       EAX,16
+{$ENDIF}
 end;
 
 (**
@@ -224,7 +351,13 @@ asm
 end;
 **)
 function MulDiv(Multiplicand, Multiplier, Divisor: Integer): Integer;
+{$IFDEF PUREPASCAL}
+begin
+  Result := Int64(Multiplicand) * Int64(Multiplier) div Divisor;
+{$ELSE}
+{$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm
+{$IFDEF TARGET_x86}
         PUSH    EBX             // Imperative save
         PUSH    ESI             // of EBX and ESI
 
@@ -268,6 +401,48 @@ asm
 @exit:
         POP     ESI             // Restore
         POP     EBX             // esi and ebx
+{$ENDIF}
+{$IFDEF TARGET_x64}
+        MOV     EAX, ECX        // Result will be negative or positive so set rounding direction
+        XOR     ECX, EDX        //  Negative: substract 1 in case of rounding
+        XOR     ECX, R8D        //  Positive: add 1
+
+        OR      EAX, EAX        // Make all operands positive, ready for unsigned operations
+        JNS     @m1Ok           // minimizing branching
+        NEG     EAX
+@m1Ok:
+        OR      EDX, EDX
+        JNS     @m2Ok
+        NEG     EDX
+@m2Ok:
+        OR      R8D, R8D
+        JNS     @DivOk
+        NEG     R8D
+@DivOK:
+        MUL     EDX             // Unsigned multiply (Multiplicand*Multiplier)
+
+        MOV     R9D, EDX        // Check for overflow, by comparing
+        SHL     R9D, 1          // 2 times the high-order 32 bits of the product (EDX)
+        CMP     R9D, R8D        // with the Divisor.
+        JAE     @Overfl         // If equal or greater than overflow with division anticipated
+
+        DIV     R8D             // Unsigned divide of product by Divisor
+
+        SUB     R8D, EDX        // Check if the result must be adjusted by adding or substracting
+        CMP     R8D, EDX        // 1 (*.5 -> nearest integer), by comparing the difference of
+        JA      @NoAdd          // Divisor and remainder with the remainder. If it is greater then
+        INC     EAX             // no rounding needed; add 1 to result otherwise
+@NoAdd:
+        OR      ECX, EDX        // From unsigned operations back the to original sign of the result
+        JNS     @Exit           // must be positive
+        NEG     EAX             // must be negative
+        JMP     @Exit
+@Overfl:
+        OR      EAX, -1         //  3 bytes alternative for MOV EAX,-1. Windows.MulDiv "overflow"
+                                //  and "zero-divide" return value
+@Exit:
+{$ENDIF}
+{$ENDIF}
 end;
 
 

@@ -1,6 +1,64 @@
 {$IFDEF FPC}
-  {$mode delphi}
+  // Copied from newer GR32
+  {$DEFINE COMPILERFPC}
+  {$DEFINE PLATFORM_INDEPENDENT}
   {$DEFINE INLININGSUPPORTED}
+
+  // Set up internal CPU target directives according to FPC directives
+  {$IFDEF CPU386}
+    {$IFDEF CPUI386}
+      // target is an Intel 80386 or later.
+      {$DEFINE TARGET_x86}
+      {$ASMMODE INTEL}
+    {$ENDIF}
+
+    {$IFDEF CPUX86_64}
+      // target is a 64-bit processor (AMD or INTEL).
+      {$DEFINE TARGET_x64}
+      {$ASMMODE INTEL}
+    {$ENDIF}
+
+    {$IFDEF CPUPOWERPC}
+      // target is a 32-bit PowerPC or compatible.
+      // currently only indirect support, added here as example on how to add
+      // future specific targets
+      {$DEFINE TARGET_POWERPC}
+    {$ENDIF}
+  {$ENDIF}
+
+  {$IFDEF CPUX86_64}
+    // target is a 64-bit processor (AMD or INTEL).
+    {$DEFINE TARGET_x64}
+    {$ASMMODE INTEL}
+  {$ENDIF}
+
+  {$IFDEF CPUARM}
+    // target is an ARM processor.
+    {$DEFINE TARGET_ARM}
+  {$ENDIF}
+
+  // Widgetsets other then Windows will want to implement BITS_GETTER
+  {$IFNDEF LCLWin32}
+    {$DEFINE BITS_GETTER}
+  {$ENDIF}
+
+  {$IFDEF PUREPASCAL}
+    {$DEFINE NATIVE_SINCOS}
+  {$ENDIF}
+  {$IFDEF TARGET_x64}
+    {$DEFINE NATIVE_SINCOS}
+  {$ENDIF}
+
+  {$IFDEF FPC}
+    {$DEFINE HAS_NATIVEINT}
+  {$ENDIF}
+
+  {$UNDEF USETHREADRESUME}
+
+  // end copied
+
+  {$mode delphi}
+//  {$DEFINE INLININGSUPPORTED}
   {$DEFINE COMPILER2005}
   {$DEFINE COMPILER7}
   {$DEFINE COMPILER6}
