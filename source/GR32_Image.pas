@@ -40,6 +40,10 @@ uses
 {$ELSE}
   Windows, Messages, Controls, Graphics, Forms,
 {$ENDIF}
+  {$IFDEF VER310}
+  // For inlining of certain GR32_Types functions Delphi Berlin wants us to add this:
+  System.Types,
+  {$ENDIF}
   Classes, SysUtils,
   GR32_Color, GR32_Types, GR32, GR32_Layers, GR32_RangeBars;
 
@@ -740,14 +744,11 @@ end;
 function TCustomPaintBox32.GetViewportRect: TRect;
 begin
   // returns position of the buffered area within the control bounds
-  with Result do
-  begin
-    // by default, the whole control is buffered
-    Left := 0;
-    Top := 0;
-    Right := Width;
-    Bottom := Height;
-  end;
+  // by default, the whole control is buffered
+  Result.Left := 0;
+  Result.Top := 0;
+  Result.Right := Width;
+  Result.Bottom := Height;
 end;
 
 procedure TCustomPaintBox32.Invalidate;
@@ -842,13 +843,12 @@ end;
 procedure TCustomPaintBox32.ResizeBuffer;
 var
   NewWidth, NewHeight, W, H: Integer;
+  R: TRect;
 begin
   // get the viewport parameters
-  with GetViewportRect do
-  begin
-    NewWidth := Right - Left;
-    NewHeight := Bottom - Top;
-  end;
+  R := GetViewportRect();
+  NewWidth := R.Right - R.Left;
+  NewHeight := R.Bottom - R.Top;
   if NewWidth < 0 then NewWidth := 0;
   if NewHeight < 0 then NewHeight := 0;
 
@@ -962,10 +962,10 @@ function TCustomImage32.BitmapToControl(const APoint: TPoint): TPoint;
 begin
   // convert coordinates from bitmap's ref. frame to control's ref. frame
   UpdateCache;
-  with CachedXForm, APoint do
+  with APoint do
   begin
-    Result.X := X * ScaleX div $10000 + ShiftX;
-    Result.Y := Y * ScaleY div $10000 + ShiftY;
+    Result.X := X * CachedXForm.ScaleX div $10000 + CachedXForm.ShiftX;
+    Result.Y := Y * CachedXForm.ScaleY div $10000 + CachedXForm.ShiftY;
   end;
 end;
 
@@ -1010,10 +1010,10 @@ begin
   // convert point coords from control's ref. frame to bitmap's ref. frame
   // the coordinates are not clipped to bitmap image boundary
   UpdateCache;
-  with CachedXForm, APoint do
+  with APoint do
   begin
-    Result.X := (X - ShiftX) * RevScaleX div $10000;
-    Result.Y := (Y - ShiftY) * RevScaleY div $10000;
+    Result.X := (X - CachedXForm.ShiftX) * CachedXForm.RevScaleX div $10000;
+    Result.Y := (Y - CachedXForm.ShiftY) * CachedXForm.RevScaleY div $10000;
   end;
 end;
 
@@ -1111,14 +1111,14 @@ begin
   else
     with CachedBitmapRect do
     begin
-      if (Left > 0) or (Right < Width) or (Top > 0) or (Bottom < Height) and
+      if (Left > 0) or (Right < Self.Width) or (Top > 0) or (Bottom < Self.Height) and
         not (BitmapAlign = baTile) then
       begin
         // clean only the part of the buffer lying around image edges
-        Dest.FillRectS(0, 0, Width, Top, C);          // top
-        Dest.FillRectS(0, Bottom, Width, Height, C);  // bottom
+        Dest.FillRectS(0, 0, Self.Width, Top, C);          // top
+        Dest.FillRectS(0, Bottom, Self.Width, Self.Height, C);  // bottom
         Dest.FillRectS(0, Top, Left, Bottom, C);      // left
-        Dest.FillRectS(Right, Top, Width, Bottom, C); // right
+        Dest.FillRectS(Right, Top, Self.Width, Bottom, C); // right
       end;
     end;
 end;
@@ -1147,7 +1147,7 @@ var
   I, J, Tx, Ty: Integer;
   R: TRect;
 begin
-  if Bitmap.Empty or IsRectEmpty(CachedBitmapRect) then Exit;
+  if Bitmap.Empty or GR32_Types.IsRectEmpty(CachedBitmapRect) then Exit;
   Bitmap.Lock;
   try
     if BitmapAlign <> baTile then Bitmap.DrawTo(Dest, CachedBitmapRect)
@@ -1159,7 +1159,7 @@ begin
         for I := 0 to Tx do
         begin
           R := CachedBitmapRect;
-          OffsetRect(R, Right * I, Bottom * J);
+          GR32_Types.OffsetRect(R, Right * I, Bottom * J);
           Bitmap.DrawTo(Dest, R);
         end;
     end;
@@ -1199,14 +1199,11 @@ begin
   else
   begin
     Size := GetBitmapSize;
-    with Size do
-    begin
-      Result := Rect(0, 0, Cx, Cy);
-      if BitmapAlign = baCenter then
-        OffsetRect(Result, (Width - Cx) div 2, (Height - Cy) div 2)
-      else if BitmapAlign = baCustom then
-        OffsetRect(Result, Round(OffsetHorz), Round(OffsetVert));
-    end;
+    Result := Rect(0, 0, Size.Cx, Size.Cy);
+    if BitmapAlign = baCenter then
+      GR32_Types.OffsetRect(Result, (Width - Size.Cx) div 2, (Height - Size.Cy) div 2)
+    else if BitmapAlign = baCustom then
+      GR32_Types.OffsetRect(Result, Round(OffsetHorz), Round(OffsetVert));
   end;
 end;
 
@@ -1214,54 +1211,54 @@ function TCustomImage32.GetBitmapSize: TSize;
 var
   ScaleX, ScaleY: Single;
 begin
-  with Result do
+//  with Result do
+//  begin
+  if Bitmap.Empty or (Width = 0) or (Height = 0) then
   begin
-    if Bitmap.Empty or (Width = 0) or (Height = 0) then
-    begin
-      Cx := 0;
-      Cy := 0;
-      Exit;
-    end;
-
-    case ScaleMode of
-      smNormal:
-        begin
-          Cx := Bitmap.Width;
-          Cy := Bitmap.Height;
-        end;
-
-      smStretch:
-        begin
-          Cx := Width;
-          Cy := Height;
-        end;
-
-      smResize:
-        begin
-          Cx := Bitmap.Width;
-          Cy := Bitmap.Height;
-          ScaleX := Width / Cx;
-          ScaleY := Height / Cy;
-          if ScaleX >= ScaleY then
-          begin
-            Cx := Round(Cx * ScaleY);
-            Cy := Height;
-          end
-          else
-          begin
-            Cx := Width;
-            Cy := Round(Cy * ScaleX);
-          end;
-        end;
-    else // smScale
-      begin
-        Cx := Round(Bitmap.Width * Scale);
-        Cy := Round(Bitmap.Height * Scale);
-      end;
-    end;
-    if Cx <= 0 then Cx := 0;
-    if Cy <= 0 then Cy := 0;
+    Result.Cx := 0;
+    Result.Cy := 0;
+    Exit;
   end;
+
+  case ScaleMode of
+    smNormal:
+      begin
+        Result.Cx := Bitmap.Width;
+        Result.Cy := Bitmap.Height;
+      end;
+
+    smStretch:
+      begin
+        Result.Cx := Width;
+        Result.Cy := Height;
+      end;
+
+    smResize:
+      begin
+        Result.Cx := Bitmap.Width;
+        Result.Cy := Bitmap.Height;
+        ScaleX := Width / Result.Cx;
+        ScaleY := Height / Result.Cy;
+        if ScaleX >= ScaleY then
+        begin
+          Result.Cx := Round(Result.Cx * ScaleY);
+          Result.Cy := Height;
+        end
+        else
+        begin
+          Result.Cx := Width;
+          Result.Cy := Round(Result.Cy * ScaleX);
+        end;
+      end;
+  else // smScale
+    begin
+      Result.Cx := Round(Bitmap.Width * Scale);
+      Result.Cy := Round(Bitmap.Height * Scale);
+    end;
+  end;
+  if Result.Cx <= 0 then Result.Cx := 0;
+  if Result.Cy <= 0 then Result.Cy := 0;
+//  end;
 end;
 
 function TCustomImage32.GetOnPixelCombine: TPixelCombineEvent;
@@ -1422,18 +1419,18 @@ var
 begin
   CachedBitmapRect := DestRect;
 
-  with CachedBitmapRect, CachedXForm do
+  with CachedBitmapRect do
   begin
     if (Right - Left <= 0) or (Bottom - Top <= 0) or Bitmap.Empty then
       CachedXForm := UnitXForm
     else
     begin
-      ShiftX := Left;
-      ShiftY := Top;
-      ScaleX := MulDiv(Right - Left, $10000, Bitmap.Width);
-      ScaleY := MulDiv(Bottom - Top, $10000, Bitmap.Height);
-      RevScaleX := MulDiv(Bitmap.Width, $10000, Right - Left);
-      RevScaleY := MulDiv(Bitmap.Height, $10000, Bottom - Top);
+      CachedXForm.ShiftX := Left;
+      CachedXForm.ShiftY := Top;
+      CachedXForm.ScaleX := MulDiv(Right - Left, $10000, Bitmap.Width);
+      CachedXForm.ScaleY := MulDiv(Bottom - Top, $10000, Bitmap.Height);
+      CachedXForm.RevScaleX := MulDiv(Bitmap.Width, $10000, Right - Left);
+      CachedXForm.RevScaleY := MulDiv(Bitmap.Height, $10000, Bottom - Top);
     end;
   end;
   CacheValid := True;
@@ -1555,20 +1552,20 @@ procedure TCustomImage32.UpdateCache;
 begin
   if CacheValid then Exit;
   CachedBitmapRect := GetBitmapRect;
-  with CachedBitmapRect, CachedXForm do
+
+  if Bitmap.Empty then
+    CachedXForm := UnitXForm
+  else
   begin
-    if Bitmap.Empty then CachedXForm := UnitXForm
-    else
-    begin
-      Assert((Right > Left) and (Bottom > Top));
-      ShiftX := Left;
-      ShiftY := Top;
-      ScaleX := MulDiv(Right - Left, $10000, Bitmap.Width);
-      ScaleY := MulDiv(Bottom - Top, $10000, Bitmap.Height);
-      RevScaleX := MulDiv(Bitmap.Width, $10000, Right - Left);
-      RevScaleY := MulDiv(Bitmap.Height, $10000, Bottom - Top);
-    end;
+    Assert((CachedBitmapRect.Right > CachedBitmapRect.Left) and (CachedBitmapRect.Bottom > CachedBitmapRect.Top));
+    CachedXForm.ShiftX := CachedBitmapRect.Left;
+    CachedXForm.ShiftY := CachedBitmapRect.Top;
+    CachedXForm.ScaleX := MulDiv(CachedBitmapRect.Right - CachedBitmapRect.Left, $10000, Bitmap.Width);
+    CachedXForm.ScaleY := MulDiv(CachedBitmapRect.Bottom - CachedBitmapRect.Top, $10000, Bitmap.Height);
+    CachedXForm.RevScaleX := MulDiv(Bitmap.Width, $10000, CachedBitmapRect.Right - CachedBitmapRect.Left);
+    CachedXForm.RevScaleY := MulDiv(Bitmap.Height, $10000, CachedBitmapRect.Bottom - CachedBitmapRect.Top);
   end;
+
   CacheValid := True;
 end;
 
@@ -1610,13 +1607,13 @@ begin
   begin
     If Assigned(HScroll) then
     begin
-      HScroll.BoundsRect := Rect(Left, Bottom, Right, Height);
+      HScroll.BoundsRect := Rect(Left, Bottom, Right, Self.Height);
       HScroll.Repaint;
     end;
 
     If Assigned(VScroll) then
     begin
-      VScroll.BoundsRect := Rect(Right, Top, Width, Bottom);
+      VScroll.BoundsRect := Rect(Right, Top, Self.Width, Bottom);
       VScroll.Repaint;
     end;
   end;
@@ -1802,7 +1799,7 @@ begin
   if IsSizeGripVisible and (Owner is TCustomForm) then
   begin
     P.X := X; P.Y := Y;
-    if PtInRect(GetSizeGripRect, P) then
+    if GR32_Types.PtInRect(GetSizeGripRect, P) then
     begin
       Action := HTBOTTOMRIGHT;
       Application.ProcessMessages;
@@ -1827,7 +1824,7 @@ begin
   if IsSizeGripVisible then
   begin
     P.X := X; P.Y := Y;
-    if PtInRect(GetSizeGripRect, P) then Screen.Cursor := crSizeNWSE;
+    if GR32_Types.PtInRect(GetSizeGripRect, P) then Screen.Cursor := crSizeNWSE;
   end;
 end;
 

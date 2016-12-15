@@ -107,7 +107,7 @@ begin
     raise Exception.Create('Could not allocate memory for color registration!');
   with NewEntry^ do
   begin
-    Name := AName;
+    Name := ShortString(AName);
     Color := AColor;
   end;
   Add(NewEntry);
@@ -117,7 +117,7 @@ procedure TColorManager.EnumColors(Proc: TGetStrProc);
 var
   I: Integer;
 begin
-  for I := 0 to Count - 1 do Proc(TColorEntry(Items[I]^).Name);
+  for I := 0 to Count - 1 do Proc(string(TColorEntry(Items[I]^).Name));
 end;
 
 function TColorManager.FindColor(const AName: string): TColor32;
@@ -127,7 +127,7 @@ begin
   Result := clBlack32;
   for I := 0 to Count - 1 do
     with TColorEntry(Items[I]^) do
-      if Name = AName then
+      if string(Name) = AName then
       begin
         Result := Color;
         Break;
@@ -177,7 +177,7 @@ begin
     with TColorEntry(Items[I]^) do
       if Color = AColor then
       begin
-        Result := TColorEntry(Items[I]^).Name;
+        Result := string(TColorEntry(Items[I]^).Name);
         Exit;
       end;
   Result := '$' + IntToHex(AColor, 8);
@@ -216,7 +216,7 @@ var
   I: Integer;
 begin
   for I := 0 to Count - 1 do
-    if CompareText(TColorEntry(Items[I]^).Name, AName) = 0 then
+    if CompareText(string(TColorEntry(Items[I]^).Name), AName) = 0 then
     begin
       Delete(I);
       Break;

@@ -2336,7 +2336,7 @@ end;
 procedure TCustomBitmap32.ChangeSize(var Width, Height: Integer; NewWidth, NewHeight: Integer);
 begin
   try
-    FontChanged(Self);
+     FontChanged(Self);
     DeleteCanvas; // Patch by Thomas Bauer.....
 
 {$IFDEF CLX}
@@ -2552,7 +2552,7 @@ begin
     end
     else if Source is TPicture then
     begin
-      with TPicture(Source) do
+      //with TPicture(Source) do
       begin
         if TPicture(Source).Graphic is TBitmap then
           AssignFromBitmap(TBitmap(TPicture(Source).Graphic))
@@ -2568,12 +2568,12 @@ begin
           try
             Self.Clear(clWhite32);  // mask on white;
             Canvas.Handle := Self.Handle;
-            TGraphicAccess(Graphic).Draw(Canvas, MakeRect(0, 0, Width, Height));
+            TGraphicAccess(TPicture(Source).Graphic).Draw(Canvas, MakeRect(0, 0, Width, Height));
 
             TempBitmap.SetSize(TPicture(Source).Graphic.Width, TPicture(Source).Graphic.Height);
             TempBitmap.Clear(clRed32); // mask on red;
             Canvas.Handle := TempBitmap.Handle;
-            TGraphicAccess(Graphic).Draw(Canvas, MakeRect(0, 0, Width, Height));
+            TGraphicAccess(TPicture(Source).Graphic).Draw(Canvas, MakeRect(0, 0, Width, Height));
 
             DstP := @Bits[0];
             SrcP := @TempBitmap.Bits[0];
@@ -2606,7 +2606,7 @@ begin
           Canvas := TCanvas.Create;
           try
             Canvas.Handle := Self.Handle;
-            TGraphicAccess(Graphic).Draw(Canvas, MakeRect(0, 0, Width, Height));
+            TGraphicAccess(TPicture(Source).Graphic).Draw(Canvas, MakeRect(0, 0, Width, Height));
             ResetAlpha;
           finally
             Canvas.Free;
@@ -2689,143 +2689,120 @@ end;
 
 function MakeRect(const L, T, R, B: Integer): TRect;
 begin
-  with Result do
-  begin
-    Left := L;
-    Top := T;
-    Right := R;
-    Bottom := B;
-  end;
+  Result.Left := L;
+  Result.Top := T;
+  Result.Right := R;
+  Result.Bottom := B;
 end;
 
 function MakeRect(const FR: TFloatRect; Rounding: TRectRounding): TRect;
 begin
-  with FR do
-    case Rounding of
-      rrClosest:
-        begin
-          Result.Left := Round(Left);
-          Result.Top := Round(Top);
-          Result.Right := Round(Right);
-          Result.Bottom := Round(Bottom);
-        end;
+  case Rounding of
+    rrClosest:
+      begin
+        Result.Left := Round(FR.Left);
+        Result.Top := Round(FR.Top);
+        Result.Right := Round(FR.Right);
+        Result.Bottom := Round(FR.Bottom);
+      end;
 
-      rrInside:
-        begin
-          Result.Left := Ceil(Left);
-          Result.Top := Ceil(Top);
-          Result.Right := Ceil(Right);
-          Result.Bottom := Ceil(Bottom);
-          if Result.Right < Result.Left then Result.Right := Result.Left;
-          if Result.Bottom < Result.Top then Result.Bottom := Result.Top;
-        end;
+    rrInside:
+      begin
+        Result.Left := Ceil(FR.Left);
+        Result.Top := Ceil(FR.Top);
+        Result.Right := Ceil(FR.Right);
+        Result.Bottom := Ceil(FR.Bottom);
+        if Result.Right < Result.Left then Result.Right := Result.Left;
+        if Result.Bottom < Result.Top then Result.Bottom := Result.Top;
+      end;
 
-      rrOutside:
-        begin
-          Result.Left := Floor(Left);
-          Result.Top := Floor(Top);
-          Result.Right := Ceil(Right);
-          Result.Bottom := Ceil(Bottom);
-        end;
-    end;
+    rrOutside:
+      begin
+        Result.Left := Floor(FR.Left);
+        Result.Top := Floor(FR.Top);
+        Result.Right := Ceil(FR.Right);
+        Result.Bottom := Ceil(FR.Bottom);
+      end;
+  end;
 end;
 
 function MakeRect(const FXR: TFixedRect; Rounding: TRectRounding): TRect;
 begin
-  with FXR do
-    case Rounding of
-      rrClosest:
-        begin
-          Result.Left := FixedRound(Left);
-          Result.Top := FixedRound(Top);
-          Result.Right := FixedRound(Right);
-          Result.Bottom := FixedRound(Bottom);
-        end;
+  case Rounding of
+    rrClosest:
+      begin
+        Result.Left := FixedRound(FXR.Left);
+        Result.Top := FixedRound(FXR.Top);
+        Result.Right := FixedRound(FXR.Right);
+        Result.Bottom := FixedRound(FXR.Bottom);
+      end;
 
-      rrInside:
-        begin
-          Result.Left := FixedCeil(Left);
-          Result.Top := FixedCeil(Top);
-          Result.Right := FixedFloor(Right);
-          Result.Bottom := FixedFloor(Bottom);
-          if Result.Right < Result.Left then Result.Right := Result.Left;
-          if Result.Bottom < Result.Top then Result.Bottom := Result.Top;
-        end;
+    rrInside:
+      begin
+        Result.Left := FixedCeil(FXR.Left);
+        Result.Top := FixedCeil(FXR.Top);
+        Result.Right := FixedFloor(FXR.Right);
+        Result.Bottom := FixedFloor(FXR.Bottom);
+        if Result.Right < Result.Left then Result.Right := Result.Left;
+        if Result.Bottom < Result.Top then Result.Bottom := Result.Top;
+      end;
 
-      rrOutside:
-        begin
-          Result.Left := FixedFloor(Left);
-          Result.Top := FixedFloor(Top);
-          Result.Right := FixedCeil(Right);
-          Result.Bottom := FixedCeil(Bottom);
-        end;
-    end;
+    rrOutside:
+      begin
+        Result.Left := FixedFloor(FXR.Left);
+        Result.Top := FixedFloor(FXR.Top);
+        Result.Right := FixedCeil(FXR.Right);
+        Result.Bottom := FixedCeil(FXR.Bottom);
+      end;
+  end;
 end;
 
 function FixedRect(const L, T, R, B: TFixed): TFixedRect;
 begin
-  with Result do
-  begin
-    Left := L;
-    Top := T;
-    Right := R;
-    Bottom := B;
-  end;
+  Result.Left := L;
+  Result.Top := T;
+  Result.Right := R;
+  Result.Bottom := B;
 end;
 
 function FixedRect(const ARect: TRect): TFixedRect;
 begin
-  with Result do
-  begin
-    Left := ARect.Left shl 16;
-    Top := ARect.Top shl 16;
-    Right := ARect.Right shl 16;
-    Bottom := ARect.Bottom shl 16;
-  end;
+  Result.Left := ARect.Left shl 16;
+  Result.Top := ARect.Top shl 16;
+  Result.Right := ARect.Right shl 16;
+  Result.Bottom := ARect.Bottom shl 16;
 end;
 
 function FixedRect(const FR: TFloatRect): TFixedRect;
 begin
-  with Result do
-  begin
-    Left := Round(FR.Left * 65536);
-    Top := Round(FR.Top * 65536);
-    Right := Round(FR.Right * 65536);
-    Bottom := Round(FR.Bottom * 65536);
-  end;
+  Result.Left := Round(FR.Left * 65536);
+  Result.Top := Round(FR.Top * 65536);
+  Result.Right := Round(FR.Right * 65536);
+  Result.Bottom := Round(FR.Bottom * 65536);
 end;
 
 function FloatRect(const L, T, R, B: Single): TFloatRect;
 begin
-  with Result do
-  begin
-    Left := L;
-    Top := T;
-    Right := R;
-    Bottom := B;
-  end;
+  Result.Left := L;
+  Result.Top := T;
+  Result.Right := R;
+  Result.Bottom := B;
 end;
 
 function FloatRect(const ARect: TRect): TFloatRect;
 begin
-  with Result do
-  begin
-    Left := ARect.Left;
-    Top := ARect.Top;
-    Right := ARect.Right;
-    Bottom := ARect.Bottom;
-  end;
+  Result.Left := ARect.Left;
+  Result.Top := ARect.Top;
+  Result.Right := ARect.Right;
+  Result.Bottom := ARect.Bottom;
 end;
 
 function FloatRect(const FXR: TFixedRect): TFloatRect;
 begin
-  with Result do
-  begin
-    Left := FXR.Left * FixedToFloat;
-    Top := FXR.Top * FixedToFloat;
-    Right := FXR.Right * FixedToFloat;
-    Bottom := FXR.Bottom * FixedToFloat;
-  end;
+  Result.Left := FXR.Left * FixedToFloat;
+  Result.Top := FXR.Top * FixedToFloat;
+  Result.Right := FXR.Right * FixedToFloat;
+  Result.Bottom := FXR.Bottom * FixedToFloat;
 end;
 
 function IntersectRect(out Dst: TRect; const R1, R2: TRect): Boolean;

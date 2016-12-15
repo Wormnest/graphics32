@@ -37,6 +37,10 @@ uses
 {$ELSE}
   Windows, Controls, Graphics, Forms,
 {$ENDIF}
+  {$IFDEF VER310}
+  // For inlining of certain GR32_Types functions Delphi Berlin wants us to add this:
+  System.Types,
+  {$ENDIF}
   Classes, SysUtils, GR32_Color, GR32_Types, GR32;
 
 const
@@ -840,7 +844,7 @@ var
 begin
   if Bitmap.Empty then Exit;
   DstRect := MakeRect(GetAdjustedLocation);
-  SrcRect := MakeRect(0, 0, Bitmap.Width, Bitmap.Height);
+  SrcRect := GR32_Types.MakeRect(0, 0, Bitmap.Width, Bitmap.Height);
   ClipRect := Buffer.ClipRect;
   if Cropped and (LayerCollection.FOwner is TCustomImage32) and
     not (TImage32Access(LayerCollection.FOwner).PaintToMode) then
@@ -939,7 +943,7 @@ begin
   else if db and dx and dh_sides and not(rhNotBottomSide in FHandles) then Result := dsSizeB
   else if dl and dy and dh_sides and not(rhNotLeftSide in FHandles) then Result := dsSizeL
   else if dt and dx and dh_sides and not(rhNotTopSide in FHandles) then Result := dsSizeT
-  else if dh_center and PtInRect(R, Point(X, Y)) then Result := dsMove;
+  else if dh_center and GR32_Types.PtInRect(R, GR32.Point(X, Y)) then Result := dsMove;
 end;
 
 procedure TRubberbandLayer.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);

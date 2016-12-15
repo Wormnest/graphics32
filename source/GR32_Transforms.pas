@@ -40,6 +40,10 @@ uses
   {$ELSE}
   Windows,
   {$ENDIF}
+  {$IFDEF VER310}
+  // For inlining of certain GR32_Types functions Delphi Berlin wants us to add this:
+  System.Types,
+  {$ENDIF}
   SysUtils, Classes, GR32_Types, GR32_Blend;
 
 // jb moved to GR32_Types
@@ -236,7 +240,7 @@ type
   function CheckSrcRect(Src: TCustomBitmap32; const SrcRect: TRect): Boolean;
   begin
     Result := False;
-    if IsRectEmpty(SrcRect) then Exit;
+    if GR32_Types.IsRectEmpty(SrcRect) then Exit;
     if (SrcRect.Left < 0) or (SrcRect.Right > Src.Width) or
       (SrcRect.Top < 0) or (SrcRect.Bottom > Src.Height) then
       raise ETransformError.Create(SSrcInvalid);
@@ -329,12 +333,12 @@ type
 
     IntersectRect(DstClip, DstClip, Dst.BoundsRect);
     IntersectRect(SrcRect, SrcRect, Src.BoundsRect);
-    OffsetRect(SrcRect, DstX - SrcX, DstY - SrcY);
+    GR32_Types.OffsetRect(SrcRect, DstX - SrcX, DstY - SrcY);
     IntersectRect(SrcRect, DstClip, SrcRect);
     DstClip := SrcRect;
-    OffsetRect(SrcRect, SrcX - DstX, SrcY - DstY);
+    GR32_Types.OffsetRect(SrcRect, SrcX - DstX, SrcY - DstY);
 
-    if not IsRectEmpty(SrcRect) then
+    if not GR32_Types.IsRectEmpty(SrcRect) then
     try
       BlendBlock(Dst, DstClip, Src, SrcRect.Left, SrcRect.Top, CombineOp, CombineCallBack);
     finally
@@ -360,9 +364,9 @@ type
   begin
     IntersectRect(DstClip, DstClip, MakeRect(0, 0, Dst.Width, Dst.Height));
     IntersectRect(DstClip, DstClip, DstRect);
-    if IsRectEmpty(DstClip) then Exit;
+    if GR32_Types.IsRectEmpty(DstClip) then Exit;
     IntersectRect(R, DstClip, DstRect);
-    if IsRectEmpty(R) then Exit;
+    if GR32_Types.IsRectEmpty(R) then Exit;
     if (SrcRect.Left < 0) or (SrcRect.Top < 0) or (SrcRect.Right > Src.Width) or
       (SrcRect.Bottom > Src.Height) then raise Exception.Create('Invalid SrcRect');
 
@@ -1255,9 +1259,9 @@ begin
   if not CheckSrcRect(Src, SrcRect) then Exit;
   IntersectRect(DstClip, DstClip, MakeRect(0, 0, Dst.Width, Dst.Height));
   IntersectRect(DstClip, DstClip, DstRect);
-  if IsRectEmpty(DstClip) then Exit;
+  if GR32_Types.IsRectEmpty(DstClip) then Exit;
   IntersectRect(R, DstClip, DstRect);
-  if IsRectEmpty(R) then Exit;
+  if GR32_Types.IsRectEmpty(R) then Exit;
 
   if (CombineOp = dmCustom) and not Assigned(CombineCallBack) then CombineOp := dmOpaque;
   if (CombineOp = dmBlend) and (Src.MasterAlpha = 0) then Exit;

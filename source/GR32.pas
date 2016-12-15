@@ -42,6 +42,10 @@ uses
 {$ELSE}
   Windows, Messages, Controls, Graphics,
 {$ENDIF}
+  {$IFDEF VER310}
+  // For inlining of certain GR32_Types functions Delphi Berlin wants us to add this:
+  System.Types, System.UITypes,
+  {$ENDIF}
   Classes, SysUtils, GR32_Color, GR32_Types;
 
 { Version Control }
@@ -1826,9 +1830,9 @@ begin
         if ClipRect.Bottom > DstH then ClipRect.Bottom := DstH;
         X := ClipRect.Left;
         Y := ClipRect.Top;
-        OffsetRect(ClipRect, -X, -Y);
+        GR32_Types.OffsetRect(ClipRect, -X, -Y);
         R := DstRect;
-        OffsetRect(R, -X - DstRect.Left, -Y - DstRect.Top);
+        GR32_Types.OffsetRect(R, -X - DstRect.Left, -Y - DstRect.Top);
         Buffer.SetSize(ClipRect.Right, ClipRect.Bottom);
         StretchTransfer(Buffer, R, ClipRect, Self, SrcRect, StretchFilter, DrawMode, OnPixelCombine);
 
@@ -4242,7 +4246,7 @@ begin
     lfCharSet := Byte(Font.Charset);
 
     if AnsiCompareText(Font.Name, 'Default') = 0 then  // do not localize
-      StrPCopy(lfFaceName, DefFontData.Name)
+      StrPCopy(lfFaceName, string(DefFontData.Name))
     else
       StrPCopy(lfFaceName, Font.Name);
 
@@ -4446,9 +4450,9 @@ begin
 
   if FillBack then
   begin
-    R := MakeRect(0, 0, Width, Height);
-    OffsetRect(R, Dx, Dy);
-    IntersectRect(R, R, MakeRect(0, 0, Width, Height));
+    R := GR32_Types.MakeRect(0, 0, Width, Height);
+    GR32_Types.OffsetRect(R, Dx, Dy);
+    GR32_Types.IntersectRect(R, R, MakeRect(0, 0, Width, Height));
     if R.Top > 0 then FillRect(0, 0, Width, R.Top, FillColor)
     else if R.Top = 0 then FillRect(0, R.Bottom, Width, Height, FillColor);
     if R.Left > 0 then FillRect(0, R.Top, R.Left, R.Bottom, FillColor)
