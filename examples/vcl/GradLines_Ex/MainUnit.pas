@@ -34,7 +34,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, GR32, GR32_Blend, ExtCtrls, GR32_Image;
+  StdCtrls, GR32_Types, GR32_Color, GR32, GR32_Blend, ExtCtrls, GR32_Image;
 
 type
   TVector2f = record

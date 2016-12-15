@@ -1,9 +1,9 @@
 object Form1: TForm1
   Left = 208
   Top = 110
-  Width = 340
-  Height = 483
   Caption = 'Form1'
+  ClientHeight = 444
+  ClientWidth = 324
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -13,58 +13,63 @@ object Form1: TForm1
   OldCreateOrder = False
   OnCreate = FormCreate
   DesignSize = (
-    332
-    456)
+    324
+    444)
   PixelsPerInch = 96
   TextHeight = 13
   object Label1: TLabel
     Left = 12
-    Top = 292
+    Top = 253
     Width = 76
     Height = 13
     Anchors = [akLeft, akBottom]
     Caption = 'RotLayer.Angle:'
+    ExplicitTop = 292
   end
   object Label2: TLabel
     Left = 12
-    Top = 324
+    Top = 285
     Width = 96
     Height = 13
     Anchors = [akLeft, akBottom]
     Caption = 'RotLayer.Position.X:'
+    ExplicitTop = 324
   end
   object Label3: TLabel
     Left = 12
-    Top = 352
+    Top = 313
     Width = 96
     Height = 13
     Anchors = [akLeft, akBottom]
     Caption = 'RotLayer.Position.Y:'
+    ExplicitTop = 352
   end
   object Label4: TLabel
     Left = 12
-    Top = 420
+    Top = 381
     Width = 85
     Height = 13
     Anchors = [akLeft, akBottom]
     Caption = 'ImgView32.Scale:'
+    ExplicitTop = 420
   end
   object ImgView: TImgView32
     Left = 4
     Top = 8
-    Width = 321
-    Height = 273
+    Width = 305
+    Height = 234
     Anchors = [akLeft, akTop, akRight, akBottom]
     Scale = 1.000000000000000000
     ScrollBars.Color = clBtnShadow
     ScrollBars.ShowHandleGrip = True
     ScrollBars.Style = rbsDefault
     SizeGrip = sgAuto
+    OverSize = 0
     TabOrder = 0
   end
   object GaugeBar1: TGaugeBar
     Left = 120
-    Top = 292
+    Top = 253
     Width = 153
     Height = 16
     Anchors = [akLeft, akBottom]
@@ -77,7 +82,7 @@ object Form1: TForm1
   end
   object GaugeBar2: TGaugeBar
     Left = 120
-    Top = 324
+    Top = 285
     Width = 153
     Height = 16
     Anchors = [akLeft, akBottom]
@@ -89,7 +94,7 @@ object Form1: TForm1
   end
   object GaugeBar3: TGaugeBar
     Left = 120
-    Top = 352
+    Top = 313
     Width = 153
     Height = 16
     Anchors = [akLeft, akBottom]
@@ -101,7 +106,7 @@ object Form1: TForm1
   end
   object GaugeBar4: TGaugeBar
     Left = 120
-    Top = 420
+    Top = 381
     Width = 153
     Height = 16
     Anchors = [akLeft, akBottom]
@@ -113,7 +118,7 @@ object Form1: TForm1
   end
   object CheckBox1: TCheckBox
     Left = 8
-    Top = 384
+    Top = 345
     Width = 125
     Height = 17
     Alignment = taLeftJustify

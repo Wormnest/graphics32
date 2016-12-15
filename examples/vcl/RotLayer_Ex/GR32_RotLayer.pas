@@ -28,7 +28,8 @@ unit GR32_RotLayer;
 interface
 
 uses
-  SysUtils, Classes, Controls, Forms, Graphics, GR32, GR32_Layers, GR32_Transforms;
+  SysUtils, Classes, Controls, Forms, Graphics, GR32_Types, GR32_Color, GR32_Blend,
+  GR32, GR32_Layers, GR32_Transforms;
 
 type
   TCustomAffineLayer = class(TCustomLayer)

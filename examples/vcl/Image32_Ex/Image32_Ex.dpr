@@ -5,7 +5,7 @@ program Image32_Ex;
 {$ENDIF}
 
 uses
-  Forms, Interfaces,
+  Forms, {$IFDEF FPC}Interfaces,{$ENDIF}
   MainUnit in 'MainUnit.pas' {Form1};
 
 {$R *.res}

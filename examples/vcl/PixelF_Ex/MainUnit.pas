@@ -29,7 +29,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, GR32, GR32_Lowlevel, GR32_Image, StdCtrls, GR32_RangeBars,
+  Dialogs, GR32_Types, GR32_Color, GR32, GR32_Lowlevel, GR32_Image, StdCtrls, GR32_RangeBars,
   ExtCtrls, Math;
 
 type

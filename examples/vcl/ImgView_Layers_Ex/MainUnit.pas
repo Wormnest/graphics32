@@ -29,6 +29,10 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+  {$IFDEF VER310}
+  // For inlining of certain GR32_Types functions Delphi Berlin wants us to add this:
+  System.Types,
+  {$ENDIF}
   Menus, ExtCtrls, {$IFNDEF FPC} JPeg, {$ENDIF} ExtDlgs, StdCtrls, GR32, GR32_Image, GR32_Layers,
   GR32_RangeBars, GR32_Filters, GR32_Transforms, GR32_Types, GR32_Color;
 
@@ -175,7 +179,7 @@ var
 begin
   // get coordinates of the center of viewport
   with ImgView.GetViewportRect do
-    P := ImgView.ControlToBitmap(Point((Right + Left) div 2, (Top + Bottom) div 2));
+    P := ImgView.ControlToBitmap(GR32.Point((Right + Left) div 2, (Top + Bottom) div 2));
 
   Result := TPositionedLayer.Create(ImgView.Layers);
   Result.Location := FloatRect(P.X - 32, P.Y - 32, P.X + 32, P.Y + 32);
@@ -363,7 +367,7 @@ begin
         Bitmap.DrawMode := dmBlend;
 
         with ImgView.GetViewportRect do
-          P := ImgView.ControlToBitmap(Point((Right + Left) div 2, (Top + Bottom) div 2));
+          P := ImgView.ControlToBitmap(GR32.Point((Right + Left) div 2, (Top + Bottom) div 2));
 
         W := Bitmap.Width / 2;
         H := Bitmap.Height / 2;
@@ -416,7 +420,7 @@ begin
       end;
 
       with ImgView.GetViewportRect do
-        P := ImgView.ControlToBitmap(Point((Right + Left) div 2, (Top + Bottom) div 2));
+        P := ImgView.ControlToBitmap(GR32.Point((Right + Left) div 2, (Top + Bottom) div 2));
 
       with B do
       begin
@@ -537,7 +541,7 @@ begin
           for I := 0 to 4 do
           begin
              with R do Buffer.RaiseRectTS(Left, Top, Right, Bottom, 35 - I * 8);
-             InflateRect(R, -1, -1);
+             GR32_Types.InflateRect(R, -1, -1);
           end;
         finally
           T.Free;

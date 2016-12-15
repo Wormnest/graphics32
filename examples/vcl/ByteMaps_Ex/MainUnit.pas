@@ -30,7 +30,8 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   ExtCtrls, StdCtrls, ComCtrls, Math, Clipbrd, ExtDlgs, GR32, GR32_ByteMaps,
-  GR32_RangeBars, GR32_Image, GR32_Layers, ToolWin, ImgList, Menus, JPeg;
+  GR32_Types, GR32_Color, GR32_RangeBars, GR32_Image, GR32_Layers, ToolWin, ImgList, Menus, JPeg,
+  System.ImageList;
 
 type
   TForm1 = class(TForm)

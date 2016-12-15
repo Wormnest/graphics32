@@ -1,9 +1,9 @@
 object Form1: TForm1
   Left = 295
   Top = 110
-  Width = 524
-  Height = 373
   Caption = 'Form1'
+  ClientHeight = 334
+  ClientWidth = 508
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -13,15 +13,15 @@ object Form1: TForm1
   OldCreateOrder = False
   OnCreate = FormCreate
   DesignSize = (
-    516
-    346)
+    508
+    334)
   PixelsPerInch = 96
   TextHeight = 13
   object ImgView: TImgView32
     Left = 16
     Top = 20
-    Width = 367
-    Height = 309
+    Width = 351
+    Height = 270
     Anchors = [akLeft, akTop, akRight, akBottom]
     Bitmap.Data = {
       1B010000D40000003A1EC5FF3820C2FF3922C0FF3924C0FF3823C5FF3925C4FF
@@ -7531,10 +7531,11 @@ object Form1: TForm1
     ScrollBars.ShowHandleGrip = True
     ScrollBars.Style = rbsDefault
     SizeGrip = sgAuto
+    OverSize = 0
     TabOrder = 0
   end
   object RadioGroup1: TRadioGroup
-    Left = 394
+    Left = 378
     Top = 20
     Width = 109
     Height = 185

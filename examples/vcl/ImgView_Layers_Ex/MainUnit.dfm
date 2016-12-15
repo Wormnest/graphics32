@@ -1,7 +1,6 @@
 object MainForm: TMainForm
   Left = 255
   Top = 121
-  AutoScroll = False
   Caption = 'Graphics32 Demo'
   ClientHeight = 448
   ClientWidth = 542
@@ -12,19 +11,22 @@ object MainForm: TMainForm
   Font.Name = 'Tahoma'
   Font.Style = []
   Menu = MainMenu
+  OldCreateOrder = True
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PixelsPerInch = 96
+  TextHeight = 13
   object ImgView: TImgView32
     Left = 0
     Top = 0
     Width = 411
     Height = 448
     Align = alClient
-    Scale = 1
+    Scale = 1.000000000000000000
     ScrollBars.ShowHandleGrip = True
     ScrollBars.Style = rbsDefault
     SizeGrip = sgNone
+    OverSize = 0
     TabOrder = 0
     TabStop = True
     OnMouseDown = ImgViewMouseDown
@@ -57,11 +59,10 @@ object MainForm: TMainForm
       end
       object ScaleCombo: TComboBox
         Left = 16
-        Top = 40
+        Top = 43
         Width = 105
         Height = 21
         DropDownCount = 9
-        ItemHeight = 13
         TabOrder = 0
         Text = '100%'
         OnChange = ScaleComboChange
@@ -74,8 +75,7 @@ object MainForm: TMainForm
           '  300%'
           '  400%'
           '  800%'
-          '1600%'
-        )
+          '1600%')
       end
       object Panel2: TPanel
         Left = 1
@@ -85,12 +85,13 @@ object MainForm: TMainForm
         Align = alTop
         BevelOuter = bvNone
         Caption = 'Image Properties'
-        Color = clBtnShadow
+        Color = clBtnText
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindow
         Font.Height = -11
         Font.Name = 'Tahoma'
         Font.Style = []
+        ParentBackground = False
         ParentFont = False
         TabOrder = 1
       end
@@ -135,6 +136,8 @@ object MainForm: TMainForm
         Font.Style = []
         ParentFont = False
         TabOrder = 0
+        ExplicitLeft = 6
+        ExplicitTop = 2
       end
       object LayerOpacity: TGaugeBar
         Left = 16
@@ -392,15 +395,15 @@ object MainForm: TMainForm
         Caption = '-'
       end
       object mnRotate90: TMenuItem
-        Caption = 'Rotate 90°'
+        Caption = 'Rotate 90'#194#176
         OnClick = mnRotate90Click
       end
       object mnRotate180: TMenuItem
-        Caption = 'Rotate 180°'
+        Caption = 'Rotate 180'#194#176
         OnClick = mnRotate180Click
       end
       object mnRotate270: TMenuItem
-        Caption = 'Rotate 270°'
+        Caption = 'Rotate 270'#194#176
         OnClick = mnRotate270Click
       end
     end

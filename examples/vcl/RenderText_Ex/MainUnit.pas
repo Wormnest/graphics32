@@ -29,7 +29,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ExtCtrls, GR32, ComCtrls, GR32_Image, Buttons;
+  StdCtrls, ExtCtrls, GR32_Types, GR32_Color, GR32, ComCtrls, GR32_Image, Buttons;
 
 type
   TForm1 = class(TForm)
