@@ -21,3 +21,5 @@ lib
 **.local
 **.identcache
 **.stat
+*.prjmgc
+*.tvsconfig
