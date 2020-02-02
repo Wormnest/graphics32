@@ -578,20 +578,28 @@ end;
 procedure TCustomBitmap32.SetPixelT(X, Y: Integer; Value: TColor32);
 begin
   BLEND_MEM[CombineMode](Value, Bits[X + Y * Width]);
+{$IFNDEF TARGET_x64}
   if MMX_ACTIVE then
   asm
     db $0F,$77               /// EMMS
   end;
+{$ELSE}
+  EMMS;
+{$ENDIF}
 end;
 
 procedure TCustomBitmap32.SetPixelT(var Ptr: PColor32; Value: TColor32);
 begin
   BLEND_MEM[CombineMode](Value, Ptr^);
   Inc(Ptr);
+{$IFNDEF TARGET_x64}
   if MMX_ACTIVE then
   asm
     db $0F,$77               /// EMMS
   end;
+{$ELSE}
+  EMMS;
+{$ENDIF}
 end;
 
 procedure TCustomBitmap32.SetPixelTS(X, Y: Integer; Value: TColor32);
@@ -600,10 +608,14 @@ begin
      (Y >= FClipRect.Top) and (Y < FClipRect.Bottom) then
   begin
     BLEND_MEM[FCombineMode](Value, Bits[X + Y * Width]);
+{$IFNDEF TARGET_x64}
     if MMX_ACTIVE then
     asm
       db $0F,$77               /// EMMS
     end;
+{$ELSE}
+    EMMS;
+{$ENDIF}
   end;
 end;
 
@@ -620,10 +632,15 @@ begin
   flrx := X and $FF;
   flry := Y and $FF;
 
+{$IFNDEF TARGET_x64}
   asm
     SAR X, 8
     SAR Y, 8
   end;
+{$ELSE}
+  X := X div 256;
+  Y := Y div 256;
+{$ENDIF}
 
   celx := A * GAMMA_TABLE[flrx xor 255];
   cely := GAMMA_TABLE[flry xor 255];
@@ -654,10 +671,15 @@ begin
   flrx := X and $FF;
   flry := Y and $FF;
 
+{$IFNDEF TARGET_x64}
   asm
     SAR X, 8
     SAR Y, 8
   end;
+{$ELSE}
+  X := X div 256;
+  Y := Y div 256;
+{$ENDIF}
 
   A := C shr 24;  // opacity
 

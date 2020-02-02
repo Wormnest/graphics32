@@ -794,6 +794,7 @@ begin
   end;
 end;
 
+{$IFDEF TARGET_x86}
 procedure M_Sharpness(Dst, Src: TBitmap32);
 const
   MMX5DWORD : int64 = $0005000500050005;
@@ -869,6 +870,7 @@ begin
   end;
   Dst.Changed;
 end;
+{$ENDIF}
 
 
 procedure GaussianBlurEx(Bitmap32: TBitmap32);
@@ -987,6 +989,7 @@ begin
   end;
 end;
 
+{$IFDEF TARGET_x86}
 procedure M_GaussianBlur(Dst, Src: TBitmap32);
 const
   MMX2DWORD : int64 = $0002000200020002;
@@ -1088,8 +1091,10 @@ begin
   end;
   Dst.Changed;
 end;
+{$ENDIF}
 
 
+{$IFDEF TARGET_x86}
 procedure InternalApplyConvolution3x3MMXpower(Dst, Src: TBitmap32; const Kernel: array of Integer;power,bias:integer);
 var
   I,J: Integer;
@@ -1229,7 +1234,9 @@ begin
   end;
   Dst.Changed;
 end;
+{$ENDIF}
 
+{$IFDEF TARGET_x86}
 procedure InternalApplyConvolution3x3MMXNormal(Dst, Src: TBitmap32; const Kernel: array of Integer);
 var
   I,J: Integer;
@@ -1347,6 +1354,7 @@ begin
   end;
   Dst.Changed;
 end;
+{$ENDIF}
 
 procedure InternalApplyConvolution3x3PixelPtr(Dst, Src: TBitmap32; const Kernel: array of Integer;bias:integer);
 var
@@ -1533,7 +1541,7 @@ begin
   end;
 end;
 
-
+{$IFDEF TARGET_x86}
 procedure InternalApplyConvolution5x5MMXPower(Dst, Src: TBitmap32; const Kernel: array of Integer;power,bias:integer);
 var
   I,J: Integer;
@@ -2038,6 +2046,7 @@ begin
   end;
   Dst.Changed;
 end;
+{$ENDIF}
 
 procedure InternalApplyConvolution5x5PixelPtr(Dst, Src: TBitmap32; const Kernel: array of Integer;bias:integer);
 var
@@ -2310,6 +2319,7 @@ begin
 end;
 
 
+{$IFDEF TARGET_x86}
 function M_ColorHypot2(C1, C2: TColor32): TColor32;
 // 10% faster...
 asm
@@ -2332,6 +2342,7 @@ asm
     ADD       EAX,EDX
     POP       EDX
 end;
+{$ENDIF}
 
 function _ColorAbsNorm(C1, C2: TColor32): TColor32;
 var
@@ -2352,6 +2363,7 @@ begin
 end;
 
 
+{$IFDEF TARGET_x86}
 function M_ColorAbsNorm(C1, C2: TColor32): TColor32;
 // 4 times faster...
 asm
@@ -2360,8 +2372,10 @@ asm
     PSADBW    MM0,MM1
     MOVD      EAX,MM0
 end;
+{$ENDIF}
 
 initialization
+{$IFDEF TARGET_x86}
   if HasMMX then
   begin
     InternalApplyConvolution3x3 := InternalApplyConvolution3x3PixelPtr;
@@ -2379,6 +2393,7 @@ initialization
     Sharpness := M_Sharpness;
   end
   else
+{$ENDIF}
   begin
     InternalApplyConvolution3x3 := InternalApplyConvolution3x3PixelPtr;
     InternalApplyConvolution5x5 := InternalApplyConvolution5x5PixelPtr;

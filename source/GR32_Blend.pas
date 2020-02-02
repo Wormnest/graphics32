@@ -1016,12 +1016,16 @@ begin
 end;
 
 procedure EMMS;
+{$IFNDEF TARGET_x64} // Needs better solution. Check more recent Graphics32.
 begin
   if MMX_ACTIVE then
+{$ENDIF}
   asm
     db $0F,$77               /// EMMS
   end;
+{$IFNDEF TARGET_x64}
 end;
+{$ENDIF}
 
 function M_CombineReg(X, Y, W: TColor32): TColor32; {$IFDEF FPC} assembler; nostackframe; {$ENDIF}
 asm

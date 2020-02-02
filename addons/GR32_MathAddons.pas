@@ -59,6 +59,7 @@ const
 { Trigonomic functions }
 
 
+{$IFDEF TARGET_x86}
 function Tan(const X: Single): Single;
 function Cotan(const X: Single): Single;           { 1 / tan(X), X <> 0 }
 function Secant(const X: Single): Single;          { 1 / cos(X) }
@@ -71,6 +72,7 @@ function ArcCos(const X: Single): Single;
 { ArcTan2 calculates ArcTan(Y/X), and returns an angle in the correct quadrant.
   IN: |Y| < 2^64, |X| < 2^64, X <> 0   OUT: [-PI..PI] radians }
 function ArcTan2(const Y, X: Single): Single;
+{$ENDIF}
 
 { Conversion between Degree and Radian }
 function DegToRad(const Degrees: Single): Single; { Radians := Degrees * PI / 180}
@@ -78,6 +80,7 @@ function RadToDeg(const Radians: Single): Single; { Degrees := Radians * 180 / P
 procedure DegToRadP(var Angle: Single);
 procedure RadToDegP(var Angle: Single);
 
+{$IFDEF TARGET_x86}
 { Modulo for Singles (faster than direct implementation),
   doesn't work with large numbers.}
 procedure Modulo(var Value:single;const Modul:Single); {Result is between -Modul/2 and +Modul/2}
@@ -94,10 +97,12 @@ procedure PolarToCartesian(const Ray,Phi:Single;var X, Y: Single);
 
 { Result := X * (2^P) }
 function Ldexp(const X: Single; const P: Integer): Single;
+{$ENDIF}
 
 { Calculate the center of the segment [P1,P2] }
 function MidPoint(const P1, P2: TFloatPoint): TFloatPoint;
 
+{$IFDEF TARGET_x86}
 { Integer power, result = Base^Exponent }
 function IntPower(Base: Single; Exponent: Integer): Single;
 
@@ -123,6 +128,7 @@ function Sum(const Data: TArrayOfSingle): Single;
 
 {}
 function Mean(const Data: TArrayOfSingle): Single;
+{$ENDIF}
 
 { Determine if the given polygon (N points) is convex. }
 function Convex(const Polygon:TArrayOfFloatPoint):boolean; overload;
@@ -131,8 +137,10 @@ function Convex(const Polygon:TArrayOfFloatPoint):boolean; overload;
 
 { Misc. }
 
+{$IFDEF TARGET_x86}
 function Min(const A, B: Single) : Single;
 function Max(const A, B: Single) : Single;
+{$ENDIF}
 function Sign(const AValue: Single): Integer;
 
 
@@ -178,6 +186,7 @@ asm
   bsf   eax,X
 end;
 
+{$IFDEF TARGET_x86}
 // FastCode Challenge
 function Max(const A, B : Single) : Single;
 asm
@@ -197,6 +206,7 @@ asm
  fcmovnb st(0), st(1)
  ffree   st(1)
 end;
+{$ENDIF}
 
 {same speed as math.sign(Double)}
 function Sign(const AValue: Single): Integer;
@@ -225,6 +235,7 @@ begin
 end;
 
 
+{$IFDEF TARGET_x86}
 function Ldexp(const X: Single; const P: Integer): Single;
   { Result := X * (2^P) }
 asm
@@ -280,6 +291,7 @@ asm
         FSTP    DWORD ptr [Angle]   // Modulo+2PI...
 @@2:    FWAIT
 end;
+{$ENDIF}
 
 function MidPoint(const P1, P2: TFloatPoint): TFloatPoint;
 const
@@ -289,6 +301,7 @@ begin
   Result.Y:= (P2.Y + P1.Y) * half;
 end;
 
+{$IFDEF TARGET_x86}
 function Tan(const X: Single): Single;
 {  Tan := Sin(X) / Cos(X) }
 asm
@@ -443,6 +456,7 @@ function Mean(const Data: TArrayOfSingle): Single;
 begin
   Result := Sum(Data) / Length(Data);
 end;
+{$ENDIF}
 
 const
   DegPerRad: Single        = 57.295779513082320876798154814105;
@@ -469,6 +483,7 @@ begin
   Angle := Angle * DegPerRad;
 end;
 
+{$IFDEF TARGET_x86}
 function IntPower(Base: Single; Exponent: Integer): single; register;
 asm
      mov     ecx, eax
@@ -491,6 +506,7 @@ asm
      fdivrp                    { Result := 1 / Result }
 @@3: fwait
 end;
+{$ENDIF}
 
 
 // Fast Math... approximative function results
@@ -506,6 +522,7 @@ const
   flnE:single=flnM;
   fsqrtA:single=0.5 * fmask/ln2;
 
+{$IFDEF TARGET_x86}
 function SqrtEx(const x:single):single;
 // exp(ln(x)*0.5)
 asm
@@ -543,6 +560,7 @@ asm
   fadd
   fmul                // multiply by initial solution
 end;
+{$ENDIF}
 
 function PointArrayToFloatArray(const points:array of TPoint):TArrayOfFloatPoint;
 var
@@ -596,6 +614,7 @@ begin
 end;
 
 
+{$IFDEF TARGET_x86}
 procedure CartesianToPolar(const X, Y: Single;var Ray, Phi: Single);
 begin
   phi := ArcTan2(Y,X);
@@ -884,5 +903,6 @@ asm
    wait
    mov    esp,ebp
 end;
+{$ENDIF}
 
 end.

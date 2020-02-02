@@ -2056,39 +2056,46 @@ end;
 
 function M_LinearInterpolator(PWX_256, PWY_256: Cardinal; C11, C21: PColor32): TColor32;
 asm
-        db $0F,$6F,$09           /// MOVQ      MM1,[ECX]
+{$IFDEF TARGET_X64}
+        MOV       RAX, RCX
+        MOVQ      MM1,QWORD PTR [R8]
+        MOVQ      MM2,MM1
+        MOVQ      MM3,QWORD PTR [R9]
+{$ELSE}
+        MOVQ      MM1,[ECX]
+        MOVQ      MM2,MM1
         MOV       ECX,C21
-        db $0F,$6F,$19           /// MOVQ      MM3,[ECX]
-        db $0F,$6F,$D1           /// MOVQ      MM2,MM1
-        db $0F,$6F,$E3           /// MOVQ      MM4,MM3
-        db $0F,$73,$D1,$20       /// PSRLQ     MM1,32
-        db $0F,$73,$D3,$20       /// PSRLQ     MM3,32
-        db $0F,$6E,$E8           /// MOVD      MM5,EAX
-        db $0F,$62,$ED           /// PUNPCKLDQ MM5,MM5
-        db $0F,$EF,$C0           /// PXOR MM0, MM0
-        db $0F,$60,$C8           /// PUNPCKLBW MM1,MM0
-        db $0F,$60,$D0           /// PUNPCKLBW MM2,MM0
-        db $0F,$F9,$D1           /// PSUBW     MM2,MM1
-        db $0F,$D5,$D5           /// PMULLW    MM2,MM5
-        db $0F,$71,$F1,$08       /// PSLLW     MM1,8
-        db $0F,$FD,$D1           /// PADDW     MM2,MM1
-        db $0F,$71,$D2,$08       /// PSRLW     MM2,8
-        db $0F,$60,$D8           /// PUNPCKLBW MM3,MM0
-        db $0F,$60,$E0           /// PUNPCKLBW MM4,MM0
-        db $0F,$F9,$E3           /// PSUBW     MM4,MM3
-        db $0F,$D5,$E5           /// PMULLW    MM4,MM5
-        db $0F,$71,$F3,$08       /// PSLLW     MM3,8
-        db $0F,$FD,$E3           /// PADDW     MM4,MM3
-        db $0F,$71,$D4,$08       /// PSRLW     MM4,8
-        db $0F,$6E,$EA           /// MOVD      MM5,EDX
-        db $0F,$62,$ED           /// PUNPCKLDQ MM5,MM5
-        db $0F,$F9,$D4           /// PSUBW     MM2,MM4
-        db $0F,$D5,$D5           /// PMULLW    MM2,MM5
-        db $0F,$71,$F4,$08       /// PSLLW     MM4,8
-        db $0F,$FD,$D4           /// PADDW     MM2,MM4
-        db $0F,$71,$D2,$08       /// PSRLW     MM2,8
-        db $0F,$67,$D0           /// PACKUSWB  MM2,MM0
-        db $0F,$7E,$D0           /// MOVD      EAX,MM2
+        MOVQ      MM3,[ECX]
+{$ENDIF}
+        PSRLQ     MM1,32
+        MOVQ      MM4,MM3
+        PSRLQ     MM3,32
+        MOVD      MM5,EAX
+        PSHUFW    MM5,MM5,0
+        PXOR      MM0,MM0
+        PUNPCKLBW MM1,MM0
+        PUNPCKLBW MM2,MM0
+        PSUBW     MM2,MM1
+        PMULLW    MM2,MM5
+        PSLLW     MM1,8
+        PADDW     MM2,MM1
+        PSRLW     MM2,8
+        PUNPCKLBW MM3,MM0
+        PUNPCKLBW MM4,MM0
+        PSUBW     MM4,MM3
+        PSLLW     MM3,8
+        PMULLW    MM4,MM5
+        PADDW     MM4,MM3
+        PSRLW     MM4,8
+        MOVD      MM5,EDX
+        PSHUFW    MM5,MM5,0
+        PSUBW     MM2,MM4
+        PMULLW    MM2,MM5
+        PSLLW     MM4,8
+        PADDW     MM2,MM4
+        PSRLW     MM2,8
+        PACKUSWB  MM2,MM0
+        MOVD      EAX,MM2
 end;
 
 function _LinearInterpolator(PWX_256, PWY_256: Cardinal; C11, C21: PColor32): TColor32;
