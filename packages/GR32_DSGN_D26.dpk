@@ -32,8 +32,8 @@ package GR32_DSGN_D26;
 requires
   rtl,
   Vcl,
-  designide,
-  GR32_D26;
+  GR32_D26,
+  designide;
 
 contains
   GR32_Dsgn_Bitmap in '..\design\GR32_Dsgn_Bitmap.pas' {PictureEditorForm},
