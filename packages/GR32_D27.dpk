@@ -1,0 +1,51 @@
+package GR32_D27;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  Vcl;
+
+contains
+  GR32 in '..\source\GR32.pas',
+  GR32_Blend in '..\source\GR32_Blend.pas',
+  GR32_ByteMaps in '..\source\GR32_ByteMaps.pas',
+  GR32_DrawingEx in '..\source\GR32_DrawingEx.pas',
+  GR32_Filters in '..\source\GR32_Filters.pas',
+  GR32_Image in '..\source\GR32_Image.pas',
+  GR32_Layers in '..\source\GR32_Layers.pas',
+  GR32_LowLevel in '..\source\GR32_LowLevel.pas',
+  GR32_Polygons in '..\source\GR32_Polygons.pas',
+  GR32_RangeBars in '..\source\GR32_RangeBars.pas',
+  GR32_System in '..\source\GR32_System.pas',
+  GR32_Transforms in '..\source\GR32_Transforms.pas',
+  gr32_color in '..\source\gr32_color.pas',
+  gr32_types in '..\source\gr32_types.pas';
+
+end.
